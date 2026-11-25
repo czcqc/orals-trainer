@@ -1,0 +1,651 @@
+<title>Engine Room Orals Trainer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: one centred column — banner, mode tabs, toolbar, four stat tiles, progress rail, one question card. */
+:root {
+  --bg: #eef1f6;
+  --surface: #ffffff;
+  --surface-2: #f6f8fb;
+  --line: #dde3ec;
+  --fg: #1a2133;
+  --muted: #5d6779;
+  --navy: #1f2a6b;
+  --navy-fg: #ffffff;
+  --badge: #6b4e6e;
+  --good: #2e7d4f;
+  --good-bg: #e5f3ea;
+  --bad: #c2413b;
+  --bad-bg: #fbe9e7;
+  --amber: #a06a00;
+  --focus: #3b5bdb;
+  --c-G: #1f3a68; --c-E: #b8510d; --c-W: #2e6b34; --c-R: #5b3a8a;
+  --shadow: 0 1px 2px rgba(20,30,60,.06), 0 4px 14px rgba(20,30,60,.05);
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12151d; --surface: #1b202b; --surface-2: #222836; --line: #2f3646; --fg: #e6e9f0; --muted: #9aa3b5;
+  --navy: #2b3a8f; --navy-fg: #ffffff; --badge: #7d5f80; --good: #5cc488; --good-bg: #1d3327; --bad: #ef7a72; --bad-bg: #3a2220;
+  --amber: #e0a84a; --focus: #8ea6ff; --shadow: 0 1px 2px rgba(0,0,0,.3); color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #12151d; --surface: #1b202b; --surface-2: #222836; --line: #2f3646; --fg: #e6e9f0; --muted: #9aa3b5;
+  --navy: #2b3a8f; --navy-fg: #ffffff; --badge: #7d5f80; --good: #5cc488; --good-bg: #1d3327; --bad: #ef7a72; --bad-bg: #3a2220;
+  --amber: #e0a84a; --focus: #8ea6ff; --shadow: 0 1px 2px rgba(0,0,0,.3); color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 24px 40px; }
+.wrap { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+button, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* Banner */
+.banner { background: var(--navy); color: var(--navy-fg); border-radius: 12px; padding: 18px 22px; display: flex; align-items: center; gap: 16px; }
+.logo { flex: none; width: 48px; height: 48px; border-radius: 50%; background: #c2413b; display: grid; place-items: center; font-weight: 700; font-size: 13px; letter-spacing: .04em; color: #fff; }
+.banner h1 { margin: 0; font-size: 1.2rem; font-weight: 600; text-wrap: balance; }
+.banner p { margin: 2px 0 0; font-size: .85rem; opacity: .85; }
+.banner p em { font-style: italic; opacity: .9; }
+
+/* Tabs + toolbar */
+.tabs, .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.tab, .btn { border: 1px solid var(--line); background: var(--surface); padding: 8px 16px; border-radius: 8px; font-weight: 500; }
+.tab[aria-selected="true"], .btn.primary { background: var(--navy); border-color: var(--navy); color: var(--navy-fg); }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn.bad { background: var(--bad); border-color: var(--bad); color: #fff; }
+.btn.good { background: var(--badge); border-color: var(--badge); color: #fff; }
+select { border: 1px solid var(--line); background: var(--surface); padding: 8px 10px; border-radius: 8px; min-width: 0; max-width: 100%; }
+.counter { margin-left: auto; color: var(--muted); font-family: var(--f-mono); font-size: .9rem; font-variant-numeric: tabular-nums; }
+
+/* Stats */
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; text-align: center; }
+.stat b { display: block; font-size: 1.8rem; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.stat span { font-size: .82rem; color: var(--muted); }
+.stat.know b { color: var(--good); }
+.stat.review b { color: var(--bad); }
+.rail { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; display: flex; }
+.rail i { display: block; height: 100%; transition: width .3s; }
+.rail .k { background: var(--good); } .rail .r { background: var(--bad); }
+
+/* Card */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
+.card-head { display: flex; align-items: stretch; border-bottom: 1px solid var(--line); }
+.qbadge { flex: none; width: 68px; background: var(--badge); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 12px 4px; font-family: var(--f-mono); }
+.qbadge b { font-size: 1rem; }
+.qbadge small { font-size: .65rem; letter-spacing: .08em; opacity: .85; }
+.qtext { padding: 16px 20px; min-width: 0; }
+.qtext .sec { font-size: .8rem; color: var(--muted); }
+.qtext h2 { margin: 2px 0 0; font-size: 1.15rem; font-weight: 500; text-wrap: balance; }
+.answer { padding: 14px 20px 6px; }
+.answer h3 { margin: 0 0 6px; font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.answer ul { margin: 0; padding: 0; list-style: none; }
+.answer li { padding: 9px 0 9px 18px; border-bottom: 1px solid var(--line); position: relative; max-width: 75ch; }
+.answer li:last-child { border-bottom: 0; }
+.answer li::before { content: ""; position: absolute; left: 2px; top: 17px; width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
+.answer ol.num { list-style: decimal; padding-left: 22px; }
+.answer ol.num li { padding-left: 4px; }
+.answer ol.num li::before { display: none; }
+.answer b { font-weight: 600; }
+.answer .single { margin: 4px 0 10px; font-size: 1.05rem; max-width: 75ch; }
+.extra { background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; margin: 10px 0; max-width: 80ch; }
+.extra h4 { margin: 0 0 4px; font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.extra h4 span { text-transform: none; letter-spacing: 0; font-weight: 400; }
+.extra p { margin: 0; font-size: .92rem; }
+.extra li { font-size: .92rem; padding: 5px 0 5px 18px; }
+.extra li::before { top: 13px; }
+.tag { display: inline-block; margin: 4px 0 12px; font-size: .72rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; padding: 3px 10px; border-radius: 99px; border: 1px solid currentColor; }
+.t-P { color: var(--muted); } .t-V { color: var(--amber); } .t-R { color: var(--c-R); }
+/* Overview panel */
+.overview h2 { margin: 0 0 4px; }
+.overview > p { margin: 0 0 14px; color: var(--muted); font-size: .88rem; }
+.ov-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 20px; }
+.ov-block h3 { margin: 0 0 8px; font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.ov-secs { display: flex; flex-direction: column; }
+.ov-sec { display: grid; grid-template-columns: 1fr auto 5.5em; gap: 10px; align-items: baseline; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line); padding: 7px 4px; border-radius: 0; font-size: .9rem; }
+.ov-sec:hover { background: var(--surface-2); }
+.ov-sec.on { background: var(--surface-2); font-weight: 600; }
+.ov-n { font-variant-numeric: tabular-nums; font-weight: 600; }
+.ov-lab { font-family: var(--f-mono); font-size: .75rem; color: var(--muted); text-align: right; }
+.ov-cats { display: grid; gap: 12px; }
+.ov-cat-h { display: flex; align-items: center; gap: 8px; font-size: .9rem; }
+.ov-cat-h .cat { font-size: .78rem; padding: 2px 10px; }
+.ov-subs { margin: 6px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 4px 6px; }
+.ov-subs li { font-size: .78rem; color: var(--muted); border: 1px solid var(--line); border-radius: 99px; padding: 1px 8px; }
+.ov-subs li b { color: var(--fg); font-weight: 600; font-variant-numeric: tabular-nums; }
+.ov-tags { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); align-items: center; }
+.ov-tags .tag { margin: 0; }
+.ov-tags span.n { font-size: .85rem; color: var(--muted); }
+@media (max-width: 640px) { .ov-grid { grid-template-columns: 1fr; } }
+.src { margin: 0 0 12px; font-size: .78rem; color: var(--muted); }
+.cat { display: inline-block; font-size: .72rem; font-weight: 600; color: #fff; padding: 1px 8px; border-radius: 99px; margin-right: 6px; }
+.c-G { background: var(--c-G); } .c-E { background: var(--c-E); } .c-W { background: var(--c-W); } .c-R { background: var(--c-R); }
+.card-foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 14px 20px; background: var(--surface-2); border-top: 1px solid var(--line); }
+.card-foot .spacer { flex: 1; }
+.mark { font-size: .78rem; font-weight: 600; padding: 3px 10px; border-radius: 99px; }
+.mark.know { background: var(--good-bg); color: var(--good); }
+.mark.review { background: var(--bad-bg); color: var(--bad); }
+.hint { color: var(--muted); font-size: .8rem; text-align: center; }
+.hint kbd { font-family: var(--f-mono); font-size: .75rem; border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; background: var(--surface); }
+
+/* Quiz */
+.opts { display: grid; gap: 8px; padding: 16px 20px; }
+.opt { text-align: left; border: 1px solid var(--line); background: var(--surface); padding: 12px 14px; border-radius: 8px; display: flex; gap: 12px; align-items: baseline; }
+.opt:hover:not(:disabled) { border-color: var(--navy); }
+.opt .l { font-family: var(--f-mono); font-weight: 600; color: var(--muted); }
+.opt.right { background: var(--good-bg); border-color: var(--good); }
+.opt.wrong { background: var(--bad-bg); border-color: var(--bad); }
+.opt:disabled { cursor: default; }
+.verdict { padding: 0 20px; font-weight: 600; }
+.verdict.ok { color: var(--good); } .verdict.no { color: var(--bad); }
+.setup { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.setup h2 { margin: 0; font-size: 1.15rem; font-weight: 600; }
+.setup p { margin: 0; color: var(--muted); max-width: 65ch; }
+.field { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.field label { min-width: 120px; color: var(--muted); font-size: .9rem; }
+.score { font-size: 2.6rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Results */
+.res-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; min-width: 0; }
+.panel h2 { margin: 0 0 12px; font-size: 1rem; font-weight: 600; }
+.secrow { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: .9rem; }
+.secrow:last-child { border-bottom: 0; }
+.secrow .n { font-family: var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.secrow .rail { grid-column: 1 / -1; }
+.hist { width: 100%; border-collapse: collapse; font-size: .9rem; font-variant-numeric: tabular-nums; }
+.hist th, .hist td { text-align: left; padding: 7px 6px; border-bottom: 1px solid var(--line); }
+.hist th { color: var(--muted); font-weight: 500; font-size: .8rem; }
+.empty { color: var(--muted); font-size: .9rem; }
+.foot { text-align: center; color: var(--muted); font-size: .78rem; }
+
+@media (max-width: 640px) {
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .res-grid { grid-template-columns: 1fr; }
+  .counter { margin-left: 0; width: 100%; }
+  .banner { padding: 14px 16px; }
+  .qbadge { width: 56px; }
+}
+@media (prefers-reduced-motion: reduce) { .rail i { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header class="banner">
+    <div class="logo" aria-hidden="true">EOW</div>
+    <div>
+      <h1>Engine Room Orals Trainer: Global Star and EOOW Oral Questions</h1>
+      <p>MCA Engineer Officer of the Watch · 165 oral exam flashcards, starting with your ship<br><em>Know it cold before the examiner asks.</em></p>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-study" data-mode="study">Study mode</button>
+    <button class="tab" role="tab" id="tab-quiz" data-mode="quiz">Quiz mode</button>
+    <button class="tab" role="tab" id="tab-results" data-mode="results">My results</button>
+  </nav>
+
+  <main id="view"></main>
+
+  <section class="panel overview" id="overview" aria-label="How the cards are organised"></section>
+
+  <p class="foot">Progress and quiz scores are saved in this browser only.</p>
+</div>
+
+<script>
+const SECTIONS = {
+  "SHIP": "Global Star: 4th Engineer essentials",
+  "WATCH": "Taking Over the Watch",
+  "BUNK": "Bunkering and Fuel Transfer",
+  "PUR": "Fuel Oil Purifiers",
+  "STEER": "Steering Gear",
+  "SKETCH": "Sketch Questions",
+  "FFE": "Fire and LSA Equipment",
+  "FIRE": "Fires and Explosions",
+  "H2S": "Hydrogen Sulphide (H₂S)",
+  "FLAM": "Flammability and Exposure Limits",
+  "O2": "Oxygen Analyser",
+  "DRAG": "Dräger Tube",
+  "PARA": "Paramagnetic Oxygen Analyser",
+  "GFC": "Gas Free Certificate",
+  "STERN": "Stern Tube"
+};
+const CATS = { G: 'General', E: 'Engine', W: 'Watchkeeping', R: 'Regulations' };
+const TAGS = { P: 'General principle', V: 'Vessel-specific: follow the SMS and maker\'s procedure', R: 'Regulatory requirement / value' };
+
+// Flashcards. a = answer points (**bold** = key terms), x = added points, src = source.
+const Q = [{"id":"s1","lab":"S1","s":"SHIP","cat":"G","sub":"Your ship","t":"V","q":"What ship were you on? Give her name, type, builder, flag and class.","a":["**GLOBAL STAR**, IMO **9859741**: a **segregated ballast LNG carrier**.","Built by **DSME, Okpo** (hull **H2487**), delivered **4 December 2020**; flag **Marshall Islands**.","Class **Lloyd's Register**: +100A1 Liquefied Gas Tanker, **Ship type 2G**, methane (LNG) in **membrane tanks**, **UMS**, **LFPF(GC,NG)** (gas-fuelled)."],"src":"Global Star Machinery Operating Manual p.12"},
+{"id":"s2","lab":"S2","s":"SHIP","cat":"G","sub":"Your ship","t":"V","q":"What are her main dimensions, speed and cargo capacity?","a":["LOA **294.9 m**, LBP 288.5 m, breadth **46.4 m**, depth 26.5 m.","Design draught **11.5 m**, scantling draught 12.5 m.","Service speed **19.5 knots** at design draught.","**4 membrane cargo tanks**: **173,610.7 m³** at 100% (170,979.5 m³ at 98.5%).","Cargo at **−163 °C**; cargo tank safety valves **250/350 mbar**."],"src":"Global Star Machinery Operating Manual p.12, 18"},
+{"id":"s3","lab":"S3","s":"SHIP","cat":"E","sub":"Main engines","t":"V","q":"What main engines does Global Star have?","a":["**Two** HYUNDAI-MAN B&W **5G70ME-C9.5-GI**: twin engine, **twin screw**, fixed-pitch propellers.","Two-stroke, crosshead, **electronically controlled**, **gas injection**, direct reversing; **5 cylinders**, bore **700 mm**, stroke **3,256 mm**.","SMCR **12,590 kW at 69.1 rpm** each; CSR 10,700 kW at 65.5 rpm.","No.1 is **starboard**, No.2 is **port**; starting air **30 bar**."],"src":"Global Star Machinery Operating Manual p.12, 34"},
+{"id":"s4","lab":"S4","s":"SHIP","cat":"E","sub":"Main engines","t":"V","q":"What fuel modes does the ME-GI have, and what happens on a gas fault?","a":["**Gas mode** with minimum **pilot oil** (about **3%** at SMCR); **specified dual fuel (SDF)**; **fuel-oil-only**.","The engine always **starts, runs at low load and stops on fuel oil**.","On any gas fault it **changes to fuel oil automatically with no loss of power**, then the HP gas pipes are **purged with nitrogen**."],"src":"Global Star Machinery Operating Manual p.42, 45"},
+{"id":"s5","lab":"S5","s":"SHIP","cat":"E","sub":"Main engines","t":"V","q":"Which valves make up the ME-GI gas valve train?","a":["**801** main safety gas valve; **807** plant main gas valve.","**802** gas bleed valve.","**809** inert gas block valve; **806** inert gas supply valve; **808** inert gas bleed valve.","**852** slow-opening valve (twin-engine arrangement)."],"src":"Global Star Machinery Operating Manual p.39"},
+{"id":"s6","lab":"S6","s":"SHIP","cat":"R","sub":"Emissions","t":"V","q":"How does Global Star meet IMO Tier III NOx limits?","a":["**Main engines: EGR** (LS-EGR), recirculating up to **40%** of exhaust gas through a **fresh-water-cooled EGR cooler** with a water handling system.","**Generators: SCR** with **urea** injection (urea tank **23.3 m³**), V₂O₅ catalyst, with an exhaust **bypass damper**.","Tier II mode outside ECAs, Tier III mode inside."],"src":"Global Star Machinery Operating Manual p.67-68, 96-98"},
+{"id":"s7","lab":"S7","s":"SHIP","cat":"E","sub":"Generators","t":"V","q":"What generators does Global Star have?","a":["Four **Wärtsilä dual-fuel** gensets at **720 rpm**: **2 × 8L34DF (3,840 kW)** and **2 × 6L34DF (2,880 kW)**.","HHI alternators: **6,600 V, 60 Hz** (4,587.5 kVA and 3,437.5 kVA).","No.1 8L and No.2 6L starboard; No.3 8L and No.4 6L port.","Gas supply at least **5.35 bar** at the engine (**6.55 bar** at the gas valve unit)."],"src":"Global Star Machinery Operating Manual p.12, 83, 96, 310"},
+{"id":"s8","lab":"S8","s":"SHIP","cat":"E","sub":"Electrical","t":"V","q":"Describe the electrical distribution on Global Star.","a":["Two **6,600 V main switchboards** (port and starboard) joined by **bus-tie breakers**; two 6,600 V **cargo switchboards**.","Transformers step down to **440 V** main and cargo boards, then **230 V**.","One **emergency switchboard**.","PMS changes a genset from **gas to HFO** if load stays **below 15% for 3 minutes**."],"src":"Global Star Machinery Operating Manual p.301, 304, 315"},
+{"id":"s9","lab":"S9","s":"SHIP","cat":"E","sub":"Emergency generator","t":"V","q":"What emergency generator is fitted and how does it start?","a":["**STX KTA38DMGE** with Cummins alternator: **850 kW, 450 V, 60 Hz, 1,800 rpm**.","**Starts automatically** on **loss of voltage** on the emergency switchboard.","Started by **compressed air** from its own **0.5 m³ × 30 bar** receiver (topped up by the emergency or main compressors).","Runs on **MGO** from a **5.2 m³** tank."],"x":["SOLAS requires it to **start automatically and take load within 45 seconds**, and to be tested regularly."],"src":"Global Star Machinery Operating Manual p.12, 187, 235, 311"},
+{"id":"s10","lab":"S10","s":"SHIP","cat":"E","sub":"Fuel gas","t":"V","q":"How is fuel gas supplied to the engines on Global Star?","a":["**HiCOM**: cargo **boil-off gas** compressed by **HP piston compressors**.","**HiVAR**: LNG pumped by an **HP pump** (Cryostar) and **vaporised** (forced boil-off).","They can run alone or in parallel.","Gas consumers: **ME-GI**, **DF gensets**, **GCU** and the **full re-liquefaction system (FRS)**.","Surplus BOG goes to the **FRS first, then the GCU**."],"src":"Global Star Machinery Operating Manual p.191-194"},
+{"id":"s11","lab":"S11","s":"SHIP","cat":"E","sub":"Steam","t":"V","q":"What boilers and economisers are fitted?","a":["**Two Alfa Laval Aalborg OS-TCi** auxiliary boilers: **6,500 kg/h**, working pressure **6.0 bar** (max 8.0 bar).","**Exhaust gas economisers**: Aalborg **XS-7V** on the MEs (1,700 kg/h) and **XS-TC7A** on the gensets (1,000 kg/h), forced circulation."],"src":"Global Star Machinery Operating Manual p.239, 251"},
+{"id":"s12","lab":"S12","s":"SHIP","cat":"E","sub":"Fuel oil","t":"V","q":"Which fuel oil tanks and purifiers does Global Star have?","a":["HFO: **No.1 FWD 1,428.1 m³**, **No.2 FWD 2,176.8 m³**, HFO (P) 349.7 m³, **LS HFO (S) 795 m³**; settling and service tanks **128.7 m³** each (P/S).","Also **LS MGO** (storage 181.3 m³, service 89.5 m³) and **MDO** (storage 249.3 m³, service 90 m³).","HFO purifiers: **2 × Alfa Laval S 967** (6,200 L/h); MDO purifier: **1 × S 937**."],"src":"Global Star Machinery Operating Manual p.18-19, 167, 177"},
+{"id":"s13","lab":"S13","s":"SHIP","cat":"E","sub":"Lubricating oil","t":"V","q":"What lubricating oils and LO purifiers are used?","a":["ME system oil **Shell Melina S 30**; cylinder oil **Alexia S6** (high BN) and **Alexia S3** (low BN), mixed on board by **ACOM**.","Genset LO **Argina S3 40**; stern tube **Melina S 30**.","ME LO purifiers **3 × Alfa Laval S 926**; G/E LO purifiers **4 × S 815**."],"src":"Global Star Machinery Operating Manual p.20-22, 197, 203"},
+{"id":"s14","lab":"S14","s":"SHIP","cat":"E","sub":"Stern tube","t":"V","q":"What stern tube arrangement does Global Star have?","a":["**Oil-lubricated** stern tube with **Kemel AX-710 air seal**.","Lubricated with **Melina S 30**.","**4 stern tube LO pumps** (2.0 m³/h × 2.5 bar) and **2 coolers**.","Intermediate shaft bearings: **Kemel**."],"x":["An **air seal** keeps a cushion of air between the oil and the sea at the aft seal, so neither leaks into the other."],"src":"Global Star Machinery Operating Manual p.13, 22, 219"},
+{"id":"s15","lab":"S15","s":"SHIP","cat":"E","sub":"Cooling and FW","t":"V","q":"Describe the cooling water system and fresh water generators.","a":["**Central fresh water cooling**: sea water cools the **central coolers** (Alfa Laval plate type); FW cools the machinery.","**3 main SW pumps** (600 m³/h) and **3 main CFW pumps**.","Two **Alfa Laval AQUA blue** fresh water generators, **25 m³/day** each, heated by **ME jacket water** (80 °C in)."],"src":"Global Star Machinery Operating Manual p.131, 135, 141"},
+{"id":"s16","lab":"S16","s":"SHIP","cat":"E","sub":"Compressed air","t":"V","q":"What compressed air plant is fitted?","a":["Main air compressors **2 × Sauer WP400** (345 m³/h × **30 bar**); topping-up **WP100**; **emergency diesel compressor WP22L**.","Main air receivers **2 × 11.5 m³ × 30 bar**.","Control and service air: **4 Tamrotor screw compressors** at **8 bar**, with **heatless dryers** (dew point −40 °C)."],"src":"Global Star Machinery Operating Manual p.12-13, 229, 235"},
+{"id":"s17","lab":"S17","s":"SHIP","cat":"E","sub":"Steering gear","t":"V","q":"What steering gear does Global Star have?","a":["**Flutek FE21-177-T050-45DC**: electro-hydraulic, **2 rams / 4 cylinders**, **Rapson slide**.","Torque **1,740 kN·m** at 35°; max working pressure **224 kg/cm²**, relief valve **280 kg/cm²**.","Rudder **35° each side** (up to 45° below 12 knots); one power unit moves **65° in 28 seconds**.","Two power units: variable-displacement **axial piston pumps**, 55 kW motors."],"src":"Global Star Machinery Operating Manual p.291"},
+{"id":"s18","lab":"S18","s":"SHIP","cat":"R","sub":"Pollution prevention","t":"V","q":"What pollution prevention equipment is fitted?","a":["**OWS: TURBULO TMPB5**, **5 m³/h**, **15 ppm** oil content alarm; bilge water holding tank **131 m³**.","**Incinerator: TeamTec GS1000** (sludge oil and solid waste).","**Sewage plant: Jonghap AEROB-25N** (58 persons).","**Ballast water treatment**: NK system (listed as \"NK-OFE\"), with its own BWTS room, oxygen generator, chiller and **neutraliser** tank.","No scrubber: emissions handled by **EGR and SCR**."],"src":"Global Star Machinery Operating Manual p.13, 19, 225, 287"},
+{"id":"s19","lab":"S19","s":"SHIP","cat":"E","sub":"Fire fighting","t":"V","q":"What fixed fire-fighting systems protect Global Star's machinery spaces?","a":["**High-expansion foam** (Kashiwa): the **main engine room system**: **2% foam + 98% sea water**, expansion about **700**.","**Local water mist** (Seaplus): MEs, gensets, purifiers, boiler burners, incinerator, IGG/GCU; needs **two signals (smoke and flame)** to release.","**High-pressure CO₂** (106 × 45 kg): switchboard rooms, **ECR**, cargo compressor/motor rooms, emergency generator room, stores."],"src":"Global Star Machinery Operating Manual p.330, 333, 337, 340-341"},
+{"id":"s20","lab":"S20","s":"SHIP","cat":"E","sub":"Automation","t":"V","q":"What automation and control systems are fitted?","a":["IAS: **Kongsberg K-Chief 700**, with an **extension alarm system** to cabins (UMS duty).","Propulsion remote control: **AutoChief 600**.","Engine control: **MAN ECS**; the ME can be controlled from the **bridge, ECR or local operating panel**.","Class notation **UMS**."],"src":"Global Star Machinery Operating Manual p.12, 52, 55, 113"},
+{"id":"w1","lab":"W1","s":"WATCH","cat":"W","sub":"Taking over the watch","t":"P","q":"Describe, in outline, the procedure for taking over an engine room watch.","a":["Start with a **walk-round**: **funnel smoke**, **steering gear and fridge flats**, then down through the engine room checking tanks, cooling water, oil levels, alarms, **bilges** and the **purifier room**.","Go to the **control room**: read the **logbook** and note irregularities, confirm the **electrical supply** condition, read the current **standing orders**.","The outgoing engineer briefs you on **abnormal conditions**, **bridge orders**, **repairs** and **dismantled machinery**.","Find out who else is in the engine room, e.g. **day workers**.","Accept the watch only when satisfied it can be taken over safely (added)."],"src":"Taking over the watch notes (docx)"},
+{"id":"w2","lab":"W2","s":"WATCH","cat":"W","sub":"Taking over the watch","t":"P","q":"What do you check on the funnel when taking over the watch, and why?","a":["The **funnel smoke**: **white smoke, black smoke, steam or sparks**.","It gives an early visual warning of **combustion or exhaust problems**, such as poor combustion or a fire risk (added)."],"src":"Taking over the watch notes (docx)"},
+{"id":"w3","lab":"W3","s":"WATCH","cat":"W","sub":"Taking over the watch","t":"V","q":"Which spaces do you check before entering the engine room, and how should you enter it?","a":["The **steering gear flat** and the **fridge flats** (refrigeration machinery).","Enter the engine room **from the top** and **do not use the lift**."],"x":["Starting at the top gives an overview of the plates on the way down, and avoids being trapped in a lift during a blackout."],"src":"Taking over the watch notes (docx)"},
+{"id":"w4","lab":"W4","s":"WATCH","cat":"W","sub":"Taking over the watch","t":"P","q":"What do you check on the cooling water systems during the takeover round?","a":["**Expansion tank** water level.","**Main engine cooling water** returns and temperatures.","**Piston cooling water** returns and temperatures."],"src":"Taking over the watch notes (docx)"},
+{"id":"w5","lab":"W5","s":"WATCH","cat":"W","sub":"Taking over the watch","t":"P","q":"What lubricating oil and safety checks are made on the main engine at takeover?","a":["**Turbocharger oil levels**.","**Observation tank** for signs of oil.","**Oil mist detector (OMD)**: on, free of alarms and working.","Listen for any **unusual noises**."],"x":["Oil in the observation tank means oil is contaminating the drains, e.g. a **cooler leak**. Unusual noise gives early warning of bearing, pump or engine faults."],"src":"Taking over the watch notes (docx)"},
+{"id":"w6","lab":"W6","s":"WATCH","cat":"W","sub":"Taking over the watch","t":"P","q":"What do you check in the bilges, purifier room and fuel tanks at takeover?","a":["Condition of the **bilges**.","The **purifier room**.","Fuel oil tanks: **full or empty**, **temperature**, and **drain water** off."],"src":"Taking over the watch notes (docx)"},
+{"id":"w7","lab":"W7","s":"WATCH","cat":"W","sub":"Taking over the watch","t":"P","q":"What do you check in the control room when taking over?","a":["Read the **logbook** and note any **irregularities**.","Read the current **standing orders**.","Electrical supply: **how many alternators are on load**, the **load on the board**, any **earth faults**, and **standby machinery**."],"x":["Standing orders are the **Chief Engineer's instructions** for the watch: limits, and when to call the Chief."],"src":"Taking over the watch notes (docx)"},
+{"id":"w8","lab":"W8","s":"WATCH","cat":"W","sub":"Taking over the watch","t":"P","q":"What must the outgoing engineer tell you at handover?","a":["Any **abnormal operating conditions** during the watch.","Any **orders from the bridge**, pointing out those recorded in the **logbook**.","Any **repairs**, and any **machinery that has been dismantled**.","Who else is in the engine room, e.g. **day workers**."],"src":"Taking over the watch notes (docx)"},
+{"id":"w9","lab":"W9","s":"WATCH","cat":"R","sub":"Taking over the watch","t":"R","q":"Under STCW, when must the handover of an engineering watch not take place?","a":["Do **not hand over** if the relieving officer is obviously **not capable** of carrying out the duties; notify the **Chief Engineer** (added).","Before taking over, the reliever must be satisfied about **standing orders**, the **state of machinery and systems**, **tank and bilge levels** and **control system modes** (added).","If a **major operation** (e.g. manoeuvring, changeover) is in progress, **defer the relief** until it is completed (added)."],"src":"STCW Code A-VIII/2 Part 4-2 (added, not in notes)"},
+{"id":"b1","lab":"B1","s":"BUNK","cat":"W","sub":"Bunkering and transfer","t":"P","q":"What does the Chief Engineer's checklist require before any bunkering?","a":["Confirm the **fuel grade and quantity** ordered; check barge or shore tanks for **water**.","Calculate **finishing ullages**: no tank above **98%** (per the notes).","**Test tank level alarms**; plug **scuppers and save-alls**; set out **drip trays and spill gear**.","Agree **maximum line pressure, loading rates and signals** with the supplier; keep **radio contact** with the manifold."],"x":["Many companies set **95%** as the normal maximum; the figure is company/SMS-specific."],"src":"Lecture 19 p.3"},
+{"id":"b2","lab":"B2","s":"BUNK","cat":"W","sub":"Bunkering and transfer","t":"V","q":"Describe bunkering HFO to the forward tanks on Global Star.","a":["Connect the hose, set **spill control**, prepare **sample containers**.","Open the tank filling valves **OF118 / OF119** (remote, IAS screen) and **OF001** to the FWD tanks; **OF002 stays closed**.","Open the **manifold valve** (local), start **slowly** and check for leaks, then raise to the **agreed rate**.","Near **90%** open the next tank and top up slowly; slow the final tank **at least 20 minutes** before the finishing ullage.","Stop, **drain the line**, close valves, disconnect, and record in the **Oil Record Book**."],"x":["Valve numbers are from Global Star's Machinery Operating Manual, Illustration 4.3.1a."],"src":"Lecture 19 pp.2-4"},
+{"id":"b3","lab":"B3","s":"BUNK","cat":"W","sub":"Bunkering and transfer","t":"P","q":"Why must at least one tank filling valve stay fully open throughout bunkering?","a":["So the oil always has an **open path**: no **pressure surge**, burst hose or **overflow** when tanks are changed over (added)."],"src":"Lecture 19 p.3"},
+{"id":"b4","lab":"B4","s":"BUNK","cat":"R","sub":"Bunkering and transfer","t":"R","q":"What sampling and records are required for bunkering?","a":["Take **drip samples** throughout, **seal** them and keep a set on board (notes).","Record the bunkering in the **Oil Record Book Part I, Section H** (added).","Keep the **Bunker Delivery Note (BDN)** on board for **3 years** (added).","Keep the sealed **MARPOL sample** until the fuel is substantially used, and **at least 12 months** (added)."],"src":"Lecture 19 p.3 + MARPOL Annex VI Reg. 18 (added)"},
+{"id":"b5","lab":"B5","s":"BUNK","cat":"E","sub":"Bunkering and transfer","t":"V","q":"Describe the HFO route from the bunker barge to the engine on Global Star.","a":["Barge → hose → **cargo manifold** → **OF001 / OF118 / OF119** → **No.1 and No.2 FWD HFO tanks**.","**FWD HFO transfer pumps** (50 m³/h × 4 bar) → **HFO tank (P)** / **LS HFO tank (S)**.","**HFO transfer pump** → **settling tanks** (settle and heat).","**Purifiers** → **service tanks** → engines."],"src":"Lecture 19 pp.4-5"},
+{"id":"b6","lab":"B6","s":"BUNK","cat":"E","sub":"Bunkering and transfer","t":"V","q":"What are the HFO tank capacities on Global Star?","a":["No.1 FWD HFO tank (C) **1,428.1 m³**; No.2 FWD HFO tank (C) **2,176.8 m³**.","HFO tank (P) **349.7 m³**; LS HFO tank (S) **795.0 m³**.","HFO settling tanks (P/S) **128.7 m³** each; HFO service tanks (P/S) **128.7 m³** each."],"src":"Lecture 19 p.5"},
+{"id":"b7","lab":"B7","s":"BUNK","cat":"W","sub":"Bunkering and transfer","t":"V","q":"Describe transferring HFO from a double bottom tank to a settling tank.","a":["**Plan**: sound the storage tank and check the space in the settling tank so it cannot overfill.","Check **temperature** (heat if needed); **drain water** from the settling tank; check the **pump suction filter**.","**Line up**: tank suction, pump suction and discharge, settling tank filling valve; keep all others **closed**.","**Start** the pump, check pressure and no air; **monitor** both levels, leaks and temperature.","**Stop**, close valves, **record** the quantity; leave the oil to **settle**, heated."],"src":"Lecture 19 pp.6-7"},
+{"id":"b8","lab":"B8","s":"BUNK","cat":"W","sub":"Bunkering and transfer","t":"P","q":"What temperature must HFO be at for transfer, and what if it is too cold?","a":["Warm enough to pump: typically about **40–50 °C**, depending on viscosity.","If too cold, put **steam on the tank heating coils** first and keep heating on during the transfer."],"src":"Lecture 19 p.6"},
+{"id":"b9","lab":"B9","s":"BUNK","cat":"W","sub":"Bunkering and transfer","t":"P","q":"Why drain the settling tank and check the suction filter before transfer, and why close all other valves?","a":["Draining removes settled **water** before more oil goes in.","A **dirty suction filter** starves the pump and causes **cavitation**.","Closing other valves stops oil going to the **wrong tank** or **flowing back** (cross-transfer)."],"src":"Lecture 19 pp.6-7"},
+{"id":"b10","lab":"B10","s":"BUNK","cat":"W","sub":"Bunkering and transfer","t":"P","q":"What protects against overfilling the settling tank, and what happens after the transfer?","a":["Watch the level and keep below **maximum fill**; most ships have **high-level switches** that stop the pump.","Afterwards leave the oil **heated** so **water and sludge settle**, and **drain the tank bottom** regularly before the purifier takes suction."],"src":"Lecture 19 pp.6-7"},
+{"id":"p1","lab":"P1","s":"PUR","cat":"E","sub":"Purifiers","t":"P","q":"What is the purpose of a fuel oil purifier?","a":["Removes **water and solid impurities** (sludge, rust, sand) before fuel reaches the engines.","Protects **fuel injection equipment**, reduces **wear** and improves reliability."],"src":"Lecture 20 p.6"},
+{"id":"p2","lab":"P2","s":"PUR","cat":"E","sub":"Purifiers","t":"P","q":"What is the working principle of a centrifugal purifier?","a":["**Centrifugal force** in a bowl rotating at high speed.","**Heavier** water and solids move to the **outside**; lighter **clean oil** moves to the **centre**.","Separation is by **difference in density**."],"src":"Lecture 20 pp.6-7"},
+{"id":"p3","lab":"P3","s":"PUR","cat":"E","sub":"Purifiers","t":"P","q":"Why is fuel oil heated before the purifier?","a":["To **reduce viscosity**, so water droplets and solids separate more easily.","Temperature depends on the **fuel grade and maker's instructions**; avoid overheating."],"x":["For heavy fuel the purifier inlet is typically about **98 °C**."],"src":"Lecture 20 pp.3, 7"},
+{"id":"p4","lab":"P4","s":"PUR","cat":"E","sub":"Purifiers","t":"P","q":"What is the difference between a purifier and a clarifier?","a":["**Purifier**: separates **water and solids**; has a **water outlet**; uses a **gravity disc** (conventional design).","**Clarifier**: removes mainly **solids**; **no water outlet**; often used **after** a purifier."],"x":["Modern units (e.g. Alfa Laval ALCAP) have no gravity disc; they detect water electronically and can run as either."],"src":"Lecture 20 pp.7-8"},
+{"id":"p5","lab":"P5","s":"PUR","cat":"E","sub":"Purifiers","t":"P","q":"Describe the fuel flow and main components of the purifying system.","a":["**Settling tank** → **filter** → **supply (feed) pump** → **heater** (steam, temperature controller) → **three-way valve** → **purifier**.","Clean oil → **back-pressure valve** → **service tank**; service tank **overflows back to the settling tank**.","Water and sludge → **sludge tank**."],"src":"Lecture 20 pp.2, 8-9"},
+{"id":"p6","lab":"P6","s":"PUR","cat":"E","sub":"Purifiers","t":"P","q":"What is the function of the settling tank?","a":["Gives time for **water and heavy solids** to settle **by gravity**: preliminary cleaning that reduces the purifier load.","It is **heated** to assist separation, and the **bottom drain** is used regularly."],"src":"Lecture 20 pp.3, 9"},
+{"id":"p7","lab":"P7","s":"PUR","cat":"E","sub":"Purifiers","t":"P","q":"How does throughput affect purifier performance?","a":["**Lower throughput** = longer time in the bowl = **better separation**.","**Higher throughput** reduces efficiency.","Flow must still keep the **service tank level** up for engine consumption."],"src":"Lecture 20 pp.3-4"},
+{"id":"p8","lab":"P8","s":"PUR","cat":"E","sub":"Purifiers","t":"P","q":"What does the three-way valve do?","a":["During **start-up or sludge discharge**, it **recirculates** oil back to the settling tank.","When the purifier is ready, it directs oil **into the purifier**.","It stops unprocessed oil reaching the clean side."],"src":"Lecture 20 pp.4, 9-10"},
+{"id":"p9","lab":"P9","s":"PUR","cat":"E","sub":"Purifiers","t":"V","q":"Why is back pressure kept on the clean oil outlet?","a":["A **back-pressure valve** after the purifier holds the correct **oil–water interface** and stops oil passing to the water/sludge outlet.","Notes quote about **2 bar**, but follow the **maker's instructions**."],"src":"Lecture 20 pp.5, 10"},
+{"id":"p10","lab":"P10","s":"PUR","cat":"E","sub":"Purifiers","t":"P","q":"What is sealing water and what happens if the seal is lost?","a":["Water put into the bowl to form a **water seal**, so clean oil cannot escape through the **water outlet**.","It sets the correct **interface**.","Loss of seal: **oil discharges through the water outlet**, wasting fuel and giving poor separation."],"src":"Lecture 20 p.11"},
+{"id":"p11","lab":"P11","s":"PUR","cat":"E","sub":"Purifiers","t":"P","q":"What is the function of the gravity disc?","a":["It sets the position of the **oil–water interface** in a conventional purifier.","It is chosen to suit the **fuel density** (and temperature)."],"x":["Rule of thumb: use the **largest disc that does not cause loss of seal**. Too large: oil to the water outlet. Too small: water in the clean oil."],"src":"Lecture 20 pp.12, 14"},
+{"id":"p12","lab":"P12","s":"PUR","cat":"E","sub":"Purifiers","t":"V","q":"Describe starting a fuel oil purifier.","a":["Check **foundation**, **gearbox oil level**, bowl correctly **assembled**, brake off.","Line up **inlet, outlet and sludge/water** lines.","Start the motor; let the bowl reach **full speed** (check current drop and speed).","Supply **sealing water** if applicable.","Start the feed pump, **heat** the oil, then open the feed **gradually** via the three-way valve.","Set **throughput and back pressure**; monitor temperature, pressure, **vibration**, leaks and discharge."],"src":"Lecture 20 pp.10-11"},
+{"id":"p13","lab":"P13","s":"PUR","cat":"E","sub":"Purifiers","t":"P","q":"How does a self-ejecting (self-cleaning) purifier work?","a":["Sludge collects in the **sludge space** while running.","At a **set interval** the **bowl opens momentarily**, ejects sludge and water, then **closes** and carries on.","Sludge goes to the **sludge tank**; it is landed ashore or **incinerated where permitted**."],"x":["Notes quote about **2,000–4,000 h** between manual cleaning, depending on fuel and maker."],"src":"Lecture 20 pp.5, 11-12"},
+{"id":"p14","lab":"P14","s":"PUR","cat":"E","sub":"Purifiers","t":"P","q":"Water keeps coming out of the clean oil outlet. What are the causes and actions?","a":["Causes: wrong **gravity disc**, wrong **interface**, too little **sealing water**, too much **throughput**, wrong **temperature**, damaged or wrongly assembled **bowl**.","Actions: check **temperature**, **throughput**, **sealing water** and **gravity disc**, then the bowl.","**Stop and inspect** if it cannot be corrected safely while running."],"src":"Lecture 20 p.12"},
+{"id":"p15","lab":"P15","s":"PUR","cat":"E","sub":"Purifiers","t":"P","q":"What causes excessive purifier vibration and what do you do?","a":["Causes: wrong **bowl assembly**, uneven **sludge build-up**, worn **bearings**, bent **spindle**, loose **foundation bolts**.","**Stop** the purifier, **isolate electrically**, inspect bowl, bearings, spindle and foundation.","Reassemble and **test run** per the maker. Never run on with severe vibration."],"src":"Lecture 20 pp.12-13"},
+{"id":"p16","lab":"P16","s":"PUR","cat":"E","sub":"Purifiers","t":"V","q":"What routine maintenance is done on a purifier?","a":["Clean the **bowl** and inspect the **disc stack**; renew **seals and O-rings**.","Check **bearings, spindle, gear and gear oil**.","Check the **sludge discharge mechanism**, operating water, valves, **heater and controller**.","Record parameters; intervals per the **maker's manual**."],"src":"Lecture 20 pp.13-14"},
+{"id":"sg1","lab":"SG1","s":"STEER","cat":"E","sub":"Steering gear","t":"P","q":"What is the function of the steering gear and what types are there?","a":["It moves the **rudder** by transmitting **torque to the rudder stock**, so the ship can keep course and manoeuvre.","Modern ships use **electro-hydraulic** gear: **ram (piston/cylinder)** type or **rotary vane** type."],"src":"Steering Gear p.13, 18"},
+{"id":"sg2","lab":"SG2","s":"STEER","cat":"E","sub":"Steering gear","t":"P","q":"Describe the construction of a four-ram steering gear.","a":["**Four hydraulic cylinders (rams)** acting on the two arms of a **tiller (actuator disc)**.","The tiller is keyed to the **rudder stock**.","**Two electric motor–pump units** supply oil; **pipes and control valves** direct the flow."],"src":"Steering Gear p.13"},
+{"id":"sg3","lab":"SG3","s":"STEER","cat":"E","sub":"Steering gear","t":"P","q":"How does a four-ram gear turn the rudder clockwise and anticlockwise?","a":["**Clockwise**: rams **1 and 3** get **high-pressure** oil; **2 and 4** go to **return (low pressure)**.","**Anticlockwise**: connections reversed: **2 and 4** high pressure, **1 and 3** return.","The **directional control valve**, commanded from the wheelhouse, chooses the direction."],"x":["Typical working pressure **100–175 bar**, depending on rudder torque."],"src":"Steering Gear pp.7-9, 14"},
+{"id":"sg4","lab":"SG4","s":"STEER","cat":"E","sub":"Steering gear","t":"P","q":"List the main components of a ram-type steering gear.","a":["**Hydraulic power units**: electric motors and pumps.","**Rams/cylinders**, **tiller**, **rudder stock**.","**Oil tank** with **low-level alarm**.","**Directional control, relief, non-return, isolating and bypass valves**.","**Filters**, **pressure gauges**, **rudder angle feedback** and alarms."],"src":"Steering Gear pp.18-19"},
+{"id":"sg5","lab":"SG5","s":"STEER","cat":"E","sub":"Steering gear","t":"P","q":"What do the relief valve and non-return valve do in a steering gear?","a":["**Relief valve**: opens above a **preset pressure** and returns oil to the low-pressure side, protecting pipes, pumps and rams (including from **rudder shock loads**).","**Non-return valve**: lets oil flow **one way only**."],"src":"Steering Gear p.21"},
+{"id":"sg6","lab":"SG6","s":"STEER","cat":"E","sub":"Steering gear","t":"P","q":"Pump vs motor, and open-loop vs closed-loop hydraulic system?","a":["**Pump**: mechanical → hydraulic energy. **Motor**: hydraulic → mechanical rotation.","**Open loop**: oil returns to the **tank** after doing work.","**Closed loop**: oil circulates **pump ↔ actuator**, with replenishment and cooling."],"src":"Steering Gear pp.19-22"},
+{"id":"sg7","lab":"SG7","s":"STEER","cat":"E","sub":"Steering gear","t":"V","q":"How does a Safematic (single-failure) arrangement respond to an oil leak?","a":["Tank **low-level switch** operates: **alarm**, and the **standby pump starts**.","If the leak continues, **automatic isolation valves** shut off the **faulty pair of rams** (bypass valves open).","The healthy pair keeps steering, at about **50% torque** (per the notes)."],"src":"Steering Gear pp.10, 14, 16"},
+{"id":"sg8","lab":"SG8","s":"STEER","cat":"R","sub":"Steering gear","t":"R","q":"Which ships must be able to regain steering after a single failure?","a":["**Oil tankers, chemical tankers and gas carriers of 10,000 GT and above**.","**Other ships of 70,000 GT and above**.","Main power units and control systems are **duplicated**."],"x":["The notes say \"tankers\"; SOLAS includes **chemical tankers and gas carriers**, so your **LNG carrier** is covered. Steering must be regained within **45 seconds** after a single failure."],"src":"Steering Gear p.15 + SOLAS II-1/29"},
+{"id":"sg9","lab":"SG9","s":"STEER","cat":"R","sub":"Steering gear","t":"R","q":"State the SOLAS performance requirement for the main steering gear.","a":["Rudder from **35° on one side to 35° on the other** at maximum ahead service speed and **deepest seagoing draught**.","From **35° on either side to 30° on the other in not more than 28 seconds**."],"x":["**Correction**: your notes say 35° to 35° in 28 s. SOLAS gives **28 s for 35° to 30°**."],"src":"Steering Gear pp.15-16 corrected to SOLAS II-1/29.3"},
+{"id":"sg10","lab":"SG10","s":"STEER","cat":"R","sub":"Steering gear","t":"R","q":"State the SOLAS performance requirement for the auxiliary steering gear.","a":["From **15° on one side to 15° on the other in not more than 60 seconds**.","At **half maximum ahead service speed or 7 knots, whichever is greater**, at deepest seagoing draught."],"src":"Steering Gear pp.15-16 + SOLAS II-1/29.4"},
+{"id":"sg11","lab":"SG11","s":"STEER","cat":"R","sub":"Steering gear","t":"R","q":"What emergency (alternative) power is required for the steering gear?","a":["Where the rudder stock is over **230 mm** at the tiller: an **alternative power source** (emergency switchboard or independent source) (added).","**Automatic** changeover within **45 seconds** (added).","Capacity for **30 minutes** on ships of 10,000 GT and above; **10 minutes** on others, enough for the auxiliary-gear performance (added)."],"x":["Your notes put the 15°–15° in 60 s figure under \"emergency\"; in SOLAS that is the **auxiliary gear** requirement."],"src":"SOLAS II-1/29.14 (added; notes merged this with auxiliary gear)"},
+{"id":"sg12","lab":"SG12","s":"STEER","cat":"R","sub":"Steering gear","t":"R","q":"What steering gear tests and drills does SOLAS require?","a":["Check and test the steering gear **within 12 hours before departure** (added).","Include **main and auxiliary gear**, remote controls, **rudder angle indicator vs actual angle**, **power failure alarms** and **automatic isolation** (added).","**Emergency steering drills at least every 3 months**: direct control from the steering flat, bridge communications, alternative power (added).","Record checks and drills in the **logbook** (added)."],"src":"SOLAS V/26 (added, not in notes)"},
+{"id":"sg13","lab":"SG13","s":"STEER","cat":"R","sub":"Steering gear","t":"R","q":"What alarm must each steering gear hydraulic tank have?","a":["A **low-level alarm** on each reservoir, giving the **earliest indication of leakage** (added).","Audible and visual on the **bridge** and in the **machinery space** (added)."],"src":"SOLAS II-1/29 (added)"},
+{"id":"sg14","lab":"SG14","s":"STEER","cat":"E","sub":"Steering gear","t":"V","q":"Identify the main parts of a rotary vane steering gear.","a":["**Rotary actuator** with a **rudder angle transmitter** on top.","**Valve block** on the actuator.","Piping: **working oil, pilot oil, return oil, suction oil**.","**Pump unit**: vane pumps with electric motors on the **oil tank**; **return oil filter**."],"src":"Steering Gear pp.3-4"},
+{"id":"sg15","lab":"SG15","s":"STEER","cat":"E","sub":"Steering gear","t":"P","q":"How does a rotary vane steering gear work?","a":["A **rotor with vanes** is keyed to the rudder stock inside a **housing with fixed vanes/stoppers** (added).","Oil is pumped into the chambers on one side of the vanes while the other side returns: the **rotor turns** the stock (added).","Compact, gives **pure torque** (no side load), **no tiller or rams** (added)."],"src":"Steering Gear pp.1-5 (working principle added)"},
+{"id":"sk1","lab":"SK1","s":"SKETCH","cat":"E","sub":"Sketch questions","t":"P","q":"Sketch and label a single-entry centrifugal pump (section along the shaft).","a":["**Suction** on the shaft axis; **discharge** nozzle tangential/vertical.","**Impeller** with curved **vanes** inside a **volute casing**.","**Mechanical seal or gland** where the shaft leaves the casing.","**Bearing housing** (radial and thrust bearings), **shaft**, **coupling** to motor, **baseplate**."],"src":"Lecture 6 pp.1-5"},
+{"id":"sk2","lab":"SK2","s":"SKETCH","cat":"E","sub":"Sketch questions","t":"P","q":"Explain how a centrifugal pump works.","a":["Pump **primed** (casing and suction full of liquid).","Liquid enters the **impeller eye**; the vanes give it **kinetic energy**, throwing it **outwards**.","The **volute** widens, slowing the liquid and converting **kinetic energy to pressure**.","Energy chain: **motor → impeller (kinetic) → volute (pressure)**."],"x":["It is **not self-priming**: it needs a **priming** pump or a flooded suction."],"src":"Lecture 6 p.6"},
+{"id":"sk3","lab":"SK3","s":"SKETCH","cat":"E","sub":"Sketch questions","t":"P","q":"Sketch a gear pump and explain its principle.","a":["Two **meshing gears** (driving and driven) in a close-fitting **casing**, **inlet** one side, **outlet** the other.","Gears **unmesh** at the inlet, creating a **partial vacuum**; oil fills the tooth spaces.","Oil is carried **round the outside** between teeth and casing.","Teeth **re-mesh** at the outlet and force the oil out: **positive displacement**, fixed volume per revolution."],"x":["A positive displacement pump needs a **relief valve** and must **never be started against a closed discharge**."],"src":"Lecture 6 pp.7-8 (Dec 2018, Dec 2019)"},
+{"id":"sk4","lab":"SK4","s":"SKETCH","cat":"E","sub":"Sketch questions","t":"P","q":"Describe a single-element temperature control system for main engine lube oil.","a":["Oil from the engine goes to a **three-way control valve**: through the **sea water cooler** or the **bypass**.","A **temperature sensor** after the mixing point sends a signal to a **P+I controller**, which compares it with the **set point**.","Too hot: **more oil through the cooler**. Too cold: **more bypass**.","Then **pump** and **duplex filter** to the engine.","**Single element** = only **one measured variable** (oil temperature)."],"x":["Notes say thermocouple; on board the sensor is usually a **Pt100 resistance thermometer**."],"src":"Lecture 6 pp.9-10"},
+{"id":"sk5","lab":"SK5","s":"SKETCH","cat":"E","sub":"Sketch questions","t":"P","q":"Sketch and describe a pneumatic remote tank contents gauge.","a":["A **bell** near the tank bottom is connected by **small bore pipe** to a **manometer** with a scale.","A **three-way cock** has **air**, **gauge** and **vent** positions: fill with air, then read the liquid head on the manometer, then vent.","A **selector cock** lets one gauge serve several tanks."],"src":"Lecture 6 p.11"},
+{"id":"sk6","lab":"SK6","s":"SKETCH","cat":"E","sub":"Sketch questions","t":"V","q":"Describe changing the main engine from HFO to diesel oil for manoeuvring.","a":["Reduce to **manoeuvring/low load**, steady running; check **DO/MGO** is ready in the service tank.","Open the DO supply and close the HFO **gradually** using the changeover valve.","Put the **Viscotherm** on manual and cool at about **2 °C per minute** (if the maker specifies).","The changeover takes about **1 hour**; do not let the system **gas up**.","Monitor **viscosity** (not below the maker's minimum), temperature, pressure and leaks; confirm DO is at the engine."],"x":["Also **shut off steam tracing and heaters** in steps and **inform the bridge**."],"src":"Lecture 6 pp.11-15 (Mar 2023)"},
+{"id":"sk7","lab":"SK7","s":"SKETCH","cat":"E","sub":"Sketch questions","t":"P","q":"Why must the HFO to diesel changeover be done slowly, and why is it done?","a":["Slowly: avoids **thermal shock** and **fuel pump seizure**, and avoids **leakage** from low viscosity.","Reasons: **MARPOL Annex VI ECA limit 0.10% sulphur**, reliable **manoeuvring**, and flushing HFO out before **shutdown or maintenance**."],"src":"Lecture 6 pp.14-15"},
+{"id":"sk8","lab":"SK8","s":"SKETCH","cat":"E","sub":"Sketch questions","t":"V","q":"Sketch a camshaft timing chain drive and show how the tension is adjusted.","a":["**Crankshaft sprocket** driving the **camshaft sprocket** by **roller chain**.","**Guide bars** (rubber-clad) and **oil sprays** along the chain.","**Chain tightener**: a pivoted arm with a **jockey wheel** pressing on the **slack side**, adjusted to take up slack."],"src":"Lecture 6 pp.16-17"},
+{"id":"sk9","lab":"SK9","s":"SKETCH","cat":"E","sub":"Sketch questions","t":"P","q":"Sketch a power card and say what it shows.","a":["**Pressure vs volume** (stroke), TDC to BDC.","Enclosed area = **work done per cycle**: expansion curve area minus compression curve area.","Used to find **mean indicated pressure** and **indicated power**."],"x":["**MIP = area ÷ length × spring constant**. **Indicated power = MIP × piston area × stroke × rev/s × cylinders** (two-stroke)."],"src":"Lecture 6 p.17"},
+{"id":"sk10","lab":"SK10","s":"SKETCH","cat":"E","sub":"Sketch questions","t":"P","q":"Sketch a draw (out-of-phase) card and mark fuel injection.","a":["**Pressure vs crank angle**, BDC–TDC–BDC.","**Compression line** (dotted) peaks at TDC.","The firing line **leaves the compression line just before TDC** (ignition) and peaks **after TDC**."],"x":["**Injection begins slightly before** the point where the lines separate; the gap is the **ignition delay**."],"src":"Lecture 6 p.18"},
+{"id":"sk11","lab":"SK11","s":"SKETCH","cat":"G","sub":"Sketch questions","t":"R","q":"Describe a freeing port.","a":["**Openings in the bulwark** at deck level to drain water off the deck.","Lower edge **as near the deck as possible**.","Protected by **rails about 230 mm apart**.","Any **hinged shutters** need clearance against jamming, with **non-corrodible pins and bearings**."],"src":"Lecture 6 pp.18-19"},
+{"id":"f1","lab":"F1","s":"FFE","cat":"R","sub":"Fire and LSA equipment","t":"R","q":"What guideline covers the annual inspection of fixed fire systems, and what is checked on a foam system?","a":["**IMO MSC.1/Circ.1432** (maintenance and inspection of fire protection systems).","Foam: pump **rotation**, **relief/vacuum valve**, **strainer**, tank **breather** and valves.","Send a **foam sample** for analysis (concentration, **expansion ratio**).","Check **monitors** move fully, **lines and nozzles**, alarms; seal and **label** with the date."],"src":"Fire Ext. Notes pp.1-2"},
+{"id":"f2","lab":"F2","s":"FFE","cat":"E","sub":"Fire and LSA equipment","t":"V","q":"What is checked on a water mist system at annual inspection?","a":["Set to **test mode**; inspect **control cabinet** and **manual release points**.","**Simulate automatic detection and release**; test **alarms**.","Run the **pumps** and check **operating pressure**.","Inspect and clean **strainers**; **blow through** lines and nozzles; drain dry sections; seal and label."],"src":"Fire Ext. Notes pp.3-5"},
+{"id":"f3","lab":"F3","s":"FFE","cat":"R","sub":"Fire and LSA equipment","t":"R","q":"What spare charges must be carried for portable fire extinguishers?","a":["**100%** spares for the first **10** extinguishers.","**50%** for the remainder that can be recharged on board.","If they **cannot be recharged on board**: extra **extinguishers** of the same type and capacity instead."],"src":"Fire Ext. Notes p.7 (SOLAS II-2/10.3)"},
+{"id":"f4","lab":"F4","s":"FFE","cat":"R","sub":"Fire and LSA equipment","t":"R","q":"How often are portable extinguishers hydrostatically tested?","a":["At intervals **not exceeding 10 years** (notes; per MSC.1/Circ.1432).","Earlier if **flag/class** requires or if **damage or corrosion** is found."],"x":["Annually: inspected and serviced by a **competent person**."],"src":"Fire Ext. Notes p.7 (MSC.1/Circ.1432)"},
+{"id":"f5","lab":"F5","s":"FFE","cat":"R","sub":"Fire and LSA equipment","t":"R","q":"What are the SOLAS requirements for SCBA on cargo ships?","a":["Each set: at least **1,200 litres** of free air, or at least **30 minutes**.","At least **two spare charges** per set.","Only **one** spare per set if a suitable **recharging compressor** is on board."],"src":"Fire Ext. Notes p.10"},
+{"id":"f6","lab":"F6","s":"FFE","cat":"W","sub":"Fire and LSA equipment","t":"V","q":"What routine checks are made on SCBA sets?","a":["Cylinders **fully charged**; gauge readings.","**Face mask** seal and visor, **demand valve**, hoses, **harness**.","**Leak test** and **low-pressure whistle/alarm** test."],"x":["SOLAS/MSC.1/Circ.1432 require a **monthly** inspection; your notes also add a weekly pressure check."],"src":"Fire Ext. Notes pp.9-10"},
+{"id":"f7","lab":"F7","s":"FFE","cat":"R","sub":"Fire and LSA equipment","t":"R","q":"What are the breathing air quality limits for BA cylinders?","a":["**CO₂** max **500 ppm**; **CO** max **5 ppm**; **oil** max **0.5 mg/m³**; no odour or taste.","**Water**: notes say 25 mg/m³; **EN 12021:2014** gives **50 mg/m³** (up to 200 bar) and **35 mg/m³** (above 200 bar). Check your edition.","Tested with **detector tubes** at the compressor outlet."],"src":"Fire Ext. Notes p.11 (EN 12021)"},
+{"id":"f8","lab":"F8","s":"FFE","cat":"E","sub":"Fire and LSA equipment","t":"P","q":"Why monitor CO and moisture in BA compressor air, and what are the compressor checks?","a":["**CO** is toxic: from a contaminated **intake** (exhaust, funnel) or **overheated compressor oil**.","**Moisture** corrodes cylinders and can **freeze regulators**.","Checks: **interstage and final relief valves**, oil level, **drain condensate**, renew **filters and carbon/molecular sieve**, check stage pressures."],"src":"Fire Ext. Notes p.12"},
+{"id":"f9","lab":"F9","s":"FFE","cat":"R","sub":"Fire and LSA equipment","t":"R","q":"What is an EEBD and how does it differ from an SCBA?","a":["**EEBD**: for **escape only** from a hazardous atmosphere; at least **10 minutes**; hood type.","Not for firefighting or entering enclosed spaces.","**SCBA**: full face mask and demand valve, **positive pressure**, at least **30 minutes**, for firefighting and rescue.","Cargo ships: at least **2 EEBDs** in accommodation, plus spares and EEBDs in machinery spaces per SOLAS II-2/13."],"src":"Fire Ext. Notes pp.13-14 (FSS Code Ch.3)"},
+{"id":"f10","lab":"F10","s":"FFE","cat":"R","sub":"Fire and LSA equipment","t":"P","q":"What is a hydrostatic test and what is the typical test pressure?","a":["The cylinder is **filled with water** and pressurised to **test pressure** (above working pressure), usually inside a **water jacket**.","**Permanent expansion** is measured to prove strength and integrity.","Typically **1.5 × working pressure**, e.g. **200 bar → 300 bar**.","Then dry, refill, **stamp** the date and pressure, issue a certificate."],"src":"Fire Ext. Notes pp.17-18"},
+{"id":"f11","lab":"F11","s":"FFE","cat":"G","sub":"Fire and LSA equipment","t":"P","q":"What are the hazards of oxygen cylinders and the precautions?","a":["Oxygen **accelerates combustion**: normally safe materials burn fiercely.","**No oil or grease** on fittings or tools: risk of **spontaneous ignition**.","Open valves **slowly**: fast opening causes **adiabatic compression** heating.","Leak test with **soapy water**; store **secured**, ventilated, away from heat."],"src":"Fire Ext. Notes pp.15-18"},
+{"id":"f12","lab":"F12","s":"FFE","cat":"R","sub":"Fire and LSA equipment","t":"R","q":"What are the immersion suit requirements and tests?","a":["One per person (**SOLAS III**); donned in **under 2 minutes** (**LSA Code**).","**Monthly** visual checks: zips, seams, lights, whistle, buddy line.","**Air pressure test** of seams (**MSC/Circ.1114**): at least every **3 years**, **annually** once over **10 years** old."],"src":"Fire Ext. Notes pp.19-20"},
+{"id":"f13","lab":"F13","s":"FFE","cat":"R","sub":"Fire and LSA equipment","t":"R","q":"What must a lifejacket have, and how are inflatable lifejackets serviced?","a":["A lifejacket for **every person**, plus extras for **watchkeepers** and remote stations.","**Whistle**, **light** (≥ **0.75 cd** for **8 hours**), **retro-reflective tape**, **lifting loop**.","Turns an unconscious person **face-up within 5 seconds**; adult size fits up to **140 kg** and **1,750 mm** chest.","Inflatable: serviced at an approved station every **12 months** (up to **17 months** if the flag allows)."],"x":["**Correction**: your notes give 140 cm / 135 kg; the LSA Code figures are **140 kg** and **1,750 mm chest girth**."],"src":"Fire Ext. Notes pp.21-22 (LSA Code)"},
+{"id":"c1","lab":"Q1","s":"FIRE","src":"Fires, gases and stern tube flashcards #1","cat":"G","sub":"Fire principles","t":"P","q":"What are the three elements of the fire triangle?","a":["**Fuel**","**Oxygen**","**Heat**"],"x":["Remove any one element and the fire goes out: **starving** (fuel), **smothering** (oxygen), **cooling** (heat).","The **fire tetrahedron** adds a fourth element: the **chemical chain reaction**, which some extinguishing media interrupt."]},
+{"id":"c2","lab":"Q2","s":"FIRE","src":"Fires, gases and stern tube flashcards #2","cat":"E","sub":"Scavenge fires","t":"P","q":"What causes a scavenge fire?","a":["Ignition of **accumulated oil and carbon deposits** within the **scavenge space**."],"single":true,"x":["Typical sources of the deposits: **piston ring blow-by**, **excess cylinder oil feed**, poor combustion from **faulty fuel injectors**, and **blocked scavenge drains**.","Ignition is usually by hot gas blowing past the piston rings."]},
+{"id":"c3","lab":"Q3","s":"FIRE","src":"Fires, gases and stern tube flashcards #3","cat":"E","sub":"Scavenge fires","t":"P","q":"What are the indications of a scavenge fire?","a":["**High scavenge air temperature**.","**Scavenge fire alarm**.","**Abnormal smoke**.","**Uneven exhaust temperatures**.","**Engine performance fluctuations**."],"x":["Also look for **turbocharger surging** and **sparks or smoke from the scavenge drains**."]},
+{"id":"c4","lab":"Q4","s":"FIRE","src":"Fires, gases and stern tube flashcards #4","cat":"W","sub":"Emergency response","t":"V","q":"What are the immediate actions during a scavenge fire?","a":["**Inform the bridge and the chief engineer**.","**Assess the severity** of the fire.","Follow the **engine manufacturer's emergency procedure**."],"x":["Typical maker's steps: **reduce engine speed/load**, **cut fuel** to the affected unit, **increase cylinder lubrication** to that unit, keep drains closed.","If the fire spreads: **stop the engine** and use the **fixed scavenge fire-extinguishing system** (e.g. CO₂ or steam)."]},
+{"id":"c5","lab":"Q5","s":"FIRE","src":"Fires, gases and stern tube flashcards #5","cat":"W","sub":"Emergency response","t":"V","q":"What precautions are required after stopping the engine due to a scavenge fire?","a":["Keep the **scavenge doors closed**.","**Prevent unauthorised access** to the area.","Follow the **manufacturer's firefighting and cooling procedures**."],"x":["Opening doors early lets in **fresh air** and can re-ignite the fire. Inspect and clean the scavenge space and check the piston rings and liners before restarting."]},
+{"id":"c6","lab":"Q6","s":"FIRE","src":"Fires, gases and stern tube flashcards #6","cat":"E","sub":"Scavenge fires","t":"P","q":"Why must scavenge drains be kept clear?","a":["To **prevent oil accumulation** in the scavenge space and so **reduce the risk of a scavenge fire**."],"single":true,"x":["Drains are checked regularly on watch; heavy or black oily drainage is an early sign of **blow-by** or **over-lubrication**."]},
+{"id":"c7","lab":"Q7","s":"FIRE","src":"Fires, gases and stern tube flashcards #7","cat":"E","sub":"Crankcase explosions","t":"P","q":"What is a crankcase explosion?","a":["An explosion caused by the **ignition of flammable oil mist** inside the **engine crankcase**."],"single":true,"x":["A small **primary explosion** can be followed by a much more violent **secondary explosion** when air is drawn in through damaged doors or relief valves."]},
+{"id":"c8","lab":"Q8","s":"FIRE","src":"Fires, gases and stern tube flashcards #8","cat":"E","sub":"Crankcase explosions","t":"P","q":"What is associated with oil mist formation inside a crankcase?","a":["**Abnormal machinery overheating**, including **overheated bearings** and **inadequate lubrication**."],"single":true,"x":["The **hot spot** vaporises lubricating oil; the vapour condenses into a fine, flammable **oil mist**. The same hot spot can then ignite it."]},
+{"id":"c9","lab":"Q9","s":"FIRE","src":"Fires, gases and stern tube flashcards #9","cat":"E","sub":"Crankcase explosions","t":"P","q":"What is the purpose of an oil mist detector (OMD)?","a":["To **detect abnormal oil mist concentrations** and give an **early warning** of crankcase danger."],"single":true,"x":["**SOLAS II-1/47.2**: engines of **2,250 kW and above**, or with cylinder bore **over 300 mm**, need an OMD, bearing temperature monitors or equivalent."]},
+{"id":"c10","lab":"Q10","s":"FIRE","src":"Fires, gases and stern tube flashcards #10","cat":"W","sub":"Machinery monitoring","t":"P","q":"What are the indications of crankcase overheating?","a":["**Oil mist detector alarm**.","**High bearing temperature**.","**Abnormal noise**.","**Abnormal vibration**."]},
+{"id":"c11","lab":"Q11","s":"FIRE","src":"Fires, gases and stern tube flashcards #11","cat":"W","sub":"Emergency response","t":"V","q":"What should you do when the oil mist detector alarm activates?","a":["**Inform the bridge and the chief engineer**.","**Treat the alarm as genuine**: never assume it is a false alarm.","Follow the **manufacturer's emergency shutdown procedure**."],"x":["Typical steps: **slow down**, then **stop the engine** as soon as the bridge allows; keep people **away from crankcase doors and relief valves**; keep doors closed until the engine has cooled."]},
+{"id":"c12","lab":"Q12","s":"FIRE","src":"Fires, gases and stern tube flashcards #12","cat":"W","sub":"Emergency response","t":"P","q":"Why must crankcase doors remain closed after stopping the engine?","a":["Opening them **too early** lets **fresh air** into a crankcase that may still contain **hot spots and oil mist**, creating a further **ignition and explosion hazard**."],"single":true,"x":["Wait for the period in the maker's instructions so the engine can **cool down** before opening."]},
+{"id":"c13","lab":"Q13","s":"FIRE","src":"Fires, gases and stern tube flashcards #13","cat":"E","sub":"Crankcase explosions","t":"P","q":"What is the purpose of crankcase relief valves?","a":["To **relieve excessive crankcase pressure** during an explosion.","To **limit flame discharge** through **flame-arresting arrangements**."],"x":["Spring-loaded and **self-closing**, so they shut quickly and stop air being drawn back in.","**IACS UR M9**: required where bore exceeds **200 mm** or crankcase volume is **0.6 m³ or more**; set to open at **not more than 0.2 bar**."]},
+{"id":"c14","lab":"Q14","s":"FIRE","src":"Fires, gases and stern tube flashcards #14","cat":"W","sub":"Fire prevention","t":"P","q":"What is a common cause of engine-room fuel oil fires?","a":["**Fuel leakage** coming into contact with **hot machinery** or **inadequately protected hot surfaces**."],"single":true,"x":["Typical hot surfaces: **exhaust manifolds**, **turbochargers**, **indicator cocks** and **boiler fronts**."]},
+{"id":"c15","lab":"Q15","s":"FIRE","src":"Fires, gases and stern tube flashcards #15","cat":"W","sub":"Fire prevention","t":"P","q":"How can fuel oil spray fires be prevented?","a":["**Maintain fuel pipes and connections**.","Fit **spray shields**.","**Maintain hot-surface insulation**.","**Inspect for leaks**.","**Repair defects promptly**."],"x":["**SOLAS II-2/4.2.2**: surfaces above **220 °C** must be insulated; high-pressure fuel delivery pipes must be **jacketed (double-walled)** with a **leak alarm**."]},
+{"id":"c16","lab":"Q16","s":"FIRE","src":"Fires, gases and stern tube flashcards #16","cat":"W","sub":"Emergency response","t":"P","q":"What is the purpose of a quick-closing valve?","a":["To **remotely isolate the fuel supply** from a tank during a **fire or other emergency**."],"single":true,"x":["Operated from a position **outside the space** (e.g. the fire control station), usually by **air, hydraulic or wire** remote control. Test regularly as per the SMS."]},
+{"id":"c17","lab":"Q17","s":"FIRE","src":"Fires, gases and stern tube flashcards #17","cat":"G","sub":"Fire principles","t":"P","q":"What is the purpose of a fixed fire-extinguishing system?","a":["To **control or extinguish a major fire** within a **protected compartment**."],"single":true,"x":["Examples: **CO₂ total flooding**, **high-expansion foam**, **water mist (e.g. Hi-Fog)** and local-application systems."]},
+{"id":"c18","lab":"Q18","s":"FIRE","src":"Fires, gases and stern tube flashcards #18","cat":"W","sub":"Emergency response","t":"V","q":"What safety precautions are required before releasing fixed CO₂?","a":["**Evacuate all personnel** and **account for everyone** (head count).","Release only when **authorised** in accordance with the **vessel's emergency procedures**."],"x":["Also: **stop ventilation**, close **dampers, doors and skylights**, **trip fuel pumps** and close **quick-closing valves**.","The **release alarm** sounds before discharge (**FSS Code Ch. 5**). Do not re-enter until the fire is confirmed out and the space ventilated."]},
+{"id":"c19","lab":"Q19","s":"FIRE","src":"Fires, gases and stern tube flashcards #19","cat":"G","sub":"Fire principles","t":"P","q":"Why is ventilation stopped during a major engine-room fire?","a":["To **restrict the oxygen supply** to the fire.","To **limit the spread of fire and smoke**.","To **maintain the effectiveness** of fixed extinguishing systems (gas is not blown out of the space)."],"x":["Fans are stopped and **fire dampers** closed from **outside the space**."]},
+{"id":"c20","lab":"Q20","s":"FIRE","src":"Fires, gases and stern tube flashcards #20","cat":"W","sub":"Emergency response","t":"V","q":"What checks are required before restarting machinery after a fire?","a":["**Confirm the fire is extinguished**.","**Confirm machinery has cooled**.","**Assess damage**.","**Rectify defects**.","**Obtain authorisation** to restart."],"num":true},
+{"id":"c21","lab":"Q21","s":"H2S","src":"Fires, gases and stern tube flashcards #21","cat":"G","sub":"Hydrogen sulphide","t":"P","q":"What is hydrogen sulphide?","a":["A **colourless**, **highly toxic** and **flammable** gas that is **heavier than air**."],"single":true,"x":["Smells of **rotten eggs** at low concentration. Being heavier than air, it collects in **low points** such as bilges and tank bottoms."]},
+{"id":"c22","lab":"Q22","s":"H2S","src":"Fires, gases and stern tube flashcards #22","cat":"G","sub":"Hydrogen sulphide","t":"P","q":"Where can hydrogen sulphide be found onboard ships?","a":["**Sewage treatment plants**.","**Bilges and bilge wells**.","**Sludge and waste tanks**.","**Contaminated ballast tanks**.","Certain **cargo tanks**.","**Petroleum systems**.","**Poorly ventilated enclosed spaces**."]},
+{"id":"c23","lab":"Q23","s":"H2S","src":"Fires, gases and stern tube flashcards #23","cat":"G","sub":"Hydrogen sulphide","t":"P","q":"Why is hydrogen sulphide dangerous?","a":["**Highly toxic** when inhaled.","Can cause **rapid unconsciousness**.","Can cause **respiratory and eye irritation**.","Presents a **fire and explosion hazard**.","Can be **fatal**."]},
+{"id":"c24","lab":"Q24","s":"H2S","src":"Fires, gases and stern tube flashcards #24","cat":"G","sub":"Hydrogen sulphide","t":"P","q":"Why must you not rely on smell to detect H₂S?","a":["Hydrogen sulphide can **impair the sense of smell** (**olfactory fatigue**), so smell is an **unreliable warning**."],"single":true,"x":["At higher concentrations (around **100 ppm** and above) the sense of smell can be lost within minutes, so a dangerous level may seem to have no smell. **Always use a gas detector.**"]},
+{"id":"c25","lab":"Q25","s":"H2S","src":"Fires, gases and stern tube flashcards #25","cat":"R","sub":"Exposure limits","t":"R","q":"What are the UK HSE workplace exposure limits for hydrogen sulphide?","a":["**8-hour TWA: 5 ppm**.","**15-minute STEL: 10 ppm**.","These are **occupational exposure limits**, **not enclosed-space entry criteria**."],"x":["Source: **HSE EH40/2005**, *Workplace exposure limits*. WELs are **legally binding in Great Britain** under **COSHH**."]},
+{"id":"c26","lab":"Q26","s":"H2S","src":"Fires, gases and stern tube flashcards #26","cat":"R","sub":"Exposure limits","t":"R","q":"What are the ACGIH recommended TLVs for hydrogen sulphide?","a":["**TLV-TWA: 1 ppm**.","**TLV-STEL: 5 ppm**.","These are **recommendations** (ACGIH, adopted **2010**), **not UK legal limits**: distinguish them from the HSE WELs."]},
+{"id":"c27","lab":"Q27","s":"H2S","src":"Fires, gases and stern tube flashcards #27","cat":"R","sub":"Enclosed-space safety","t":"V","q":"What precautions are required if hydrogen sulphide is suspected?","a":["**Raise the alarm**.","**Prevent unauthorised entry**.","Use **appropriate gas detection equipment**.","Follow **enclosed-space safety procedures**.","**Never attempt an unprotected rescue**."],"x":["Rescue only with **breathing apparatus**, a **standby team** and the vessel's **enclosed-space rescue plan**."]},
+{"id":"c28","lab":"Q28","s":"FLAM","src":"Fires, gases and stern tube flashcards #28","cat":"G","sub":"Fire principles","t":"P","q":"What is the Lower Flammable Limit (LFL)?","a":["The **minimum concentration** of flammable gas or vapour **in air** that can **support combustion** under specified conditions."],"single":true,"x":["Example: **methane** (LNG) has an LFL of about **5% by volume** in air."]},
+{"id":"c29","lab":"Q29","s":"FLAM","src":"Fires, gases and stern tube flashcards #29","cat":"G","sub":"Fire principles","t":"P","q":"What is the Upper Flammable Limit (UFL)?","a":["The **maximum concentration** of flammable gas or vapour **in air** that can **support combustion** under specified conditions."],"single":true,"x":["Example: **methane** has a UFL of about **15% by volume** in air."]},
+{"id":"c30","lab":"Q30","s":"FLAM","src":"Fires, gases and stern tube flashcards #30","cat":"G","sub":"Fire principles","t":"P","q":"What is the flammable range?","a":["The range of gas concentrations **between the LFL and the UFL**."],"single":true,"x":["Below the LFL the mixture is **too lean**; above the UFL it is **too rich**. A rich mixture becomes **flammable again** when it is **diluted with air**."]},
+{"id":"c31","lab":"Q31","s":"FLAM","src":"Fires, gases and stern tube flashcards #31","cat":"G","sub":"Fire principles","t":"P","q":"Does being below the LFL mean an atmosphere is safe?","a":["**No.** **Toxic gases** can be dangerous at concentrations **far below their flammable limits**, and **oxygen** may still be deficient."],"single":true,"x":["Example: H₂S LFL is about **4% (40,000 ppm)**, but the UK WEL is only **5 ppm**."]},
+{"id":"c32","lab":"Q32","s":"FLAM","src":"Fires, gases and stern tube flashcards #32","cat":"G","sub":"Fire principles","t":"P","q":"What does LEL stand for?","a":["**Lower Explosive Limit**. Commonly used **interchangeably** with **Lower Flammable Limit (LFL)**."],"single":true},
+{"id":"c33","lab":"Q33","s":"FLAM","src":"Fires, gases and stern tube flashcards #33","cat":"G","sub":"Fire principles","t":"P","q":"What does UEL stand for?","a":["**Upper Explosive Limit**. Commonly used **interchangeably** with **Upper Flammable Limit (UFL)**."],"single":true},
+{"id":"c34","lab":"Q34","s":"FLAM","src":"Fires, gases and stern tube flashcards #34","cat":"R","sub":"Exposure limits","t":"P","q":"What does TLV stand for?","a":["**Threshold Limit Value**: an **occupational exposure guideline** for hazardous substances, published by the **ACGIH**."],"single":true},
+{"id":"c35","lab":"Q35","s":"FLAM","src":"Fires, gases and stern tube flashcards #35","cat":"R","sub":"Exposure limits","t":"P","q":"What are the three types of TLV?","a":["**TLV-TWA**: Time-Weighted Average.","**TLV-STEL**: Short-Term Exposure Limit.","**TLV-C**: Ceiling Limit."]},
+{"id":"c36","lab":"Q36","s":"FLAM","src":"Fires, gases and stern tube flashcards #36","cat":"R","sub":"Exposure limits","t":"P","q":"What is TWA?","a":["**Time-Weighted Average**: the average exposure, normally calculated over an **8-hour working day**."],"single":true},
+{"id":"c37","lab":"Q37","s":"FLAM","src":"Fires, gases and stern tube flashcards #37","cat":"R","sub":"Exposure limits","t":"P","q":"What is STEL?","a":["**Short-Term Exposure Limit**: normally measured over a **15-minute period**."],"single":true,"x":["Set to prevent **acute effects** (e.g. eye irritation) from short, high exposures."]},
+{"id":"c38","lab":"Q38","s":"FLAM","src":"Fires, gases and stern tube flashcards #38","cat":"R","sub":"Exposure limits","t":"P","q":"What is a Ceiling Limit?","a":["An exposure concentration that **must not be exceeded at any time**."],"single":true},
+{"id":"c39","lab":"Q39","s":"FLAM","src":"Fires, gases and stern tube flashcards #39","cat":"R","sub":"Exposure limits","t":"P","q":"What is the difference between TLV and LFL/UFL?","a":["**TLV** concerns **occupational exposure and health** (toxicity), usually in **ppm**.","**LFL and UFL** concern **flammability**, usually in **% by volume**."]},
+{"id":"c40","lab":"Q40","s":"FLAM","src":"Fires, gases and stern tube flashcards #40","cat":"R","sub":"Exposure limits","t":"P","q":"What does ppm stand for?","a":["**Parts per million**."],"single":true,"x":["**10,000 ppm = 1% by volume**."]},
+{"id":"c41","lab":"Q41","s":"O2","src":"Fires, gases and stern tube flashcards #41","cat":"G","sub":"Gas detection equipment","t":"P","q":"What is an oxygen analyser?","a":["An instrument that measures the **oxygen concentration** in a gas mixture, normally expressed as a **percentage by volume (% vol)**."],"single":true},
+{"id":"c42","lab":"Q42","s":"O2","src":"Fires, gases and stern tube flashcards #42","cat":"G","sub":"Gas detection equipment","t":"P","q":"Where are oxygen analysers used onboard ships?","a":["**Enclosed spaces**.","**Ballast tanks**.","**Cargo tanks**.","**Inert gas systems**.","**Atmospheric monitoring systems**."]},
+{"id":"c43","lab":"Q43","s":"O2","src":"Fires, gases and stern tube flashcards #43","cat":"G","sub":"Gas detection equipment","t":"P","q":"What is the normal oxygen concentration in atmospheric air?","a":["Approximately **20.9% by volume**."],"single":true,"x":["IMO enclosed-space guidance requires a **steady reading of 21% by volume** (i.e. normal air) before entry."]},
+{"id":"c44","lab":"Q44","s":"O2","src":"Fires, gases and stern tube flashcards #44","cat":"R","sub":"Enclosed-space safety","t":"R","q":"Can an oxygen analyser alone confirm that an enclosed space is safe?","a":["**No.** **Flammable** and **toxic** gases must also be tested, and **all applicable entry requirements** must be satisfied."],"single":true,"x":["**IMO Res. A.1185(33)**: oxygen **21% by volume**, flammable gas **not more than 1% of LFL**, toxic gases **below 50% of the OEL**, plus a permit to work and continued monitoring."]},
+{"id":"c45","lab":"Q45","s":"O2","src":"Fires, gases and stern tube flashcards #45","cat":"G","sub":"Gas detection equipment","t":"P","q":"What is the difference between an oxygen analyser, a flammable gas detector and a toxic gas detector?","a":["**Oxygen analyser**: measures oxygen concentration in **% vol**.","**Flammable gas detector**: commonly measures **% LEL**.","**Toxic gas detector**: commonly measures concentration in **ppm**."]},
+{"id":"c46","lab":"Q46","s":"DRAG","src":"Fires, gases and stern tube flashcards #46","cat":"G","sub":"Gas detection equipment","t":"P","q":"What is a Dräger tube?","a":["A **chemical gas detection tube** used to measure the **concentration of a specific gas** in an atmosphere."],"single":true},
+{"id":"c47","lab":"Q47","s":"DRAG","src":"Fires, gases and stern tube flashcards #47","cat":"G","sub":"Gas detection equipment","t":"P","q":"What is the working principle of a Dräger tube?","a":["A gas sample is drawn through the tube and **reacts with a chemical reagent**, causing a **colour change**. The **length of the stain** shows the **gas concentration** on the printed scale."],"single":true,"x":["Break both tips, fit the tube with the **arrow pointing to the pump**, and give the **specified number of pump strokes**."]},
+{"id":"c48","lab":"Q48","s":"DRAG","src":"Fires, gases and stern tube flashcards #48","cat":"G","sub":"Gas detection equipment","t":"P","q":"What gases can be detected using suitable Dräger tubes?","a":["**Hydrogen sulphide**, **carbon monoxide** and **other gases**, depending on the **specific tube selected**."],"single":true,"x":["Other common tubes: **CO₂**, **benzene**, **ammonia**, **nitrous fumes**. Check the tube's **expiry date** and **measuring range**."]},
+{"id":"c49","lab":"Q49","s":"DRAG","src":"Fires, gases and stern tube flashcards #49","cat":"G","sub":"Gas detection equipment","t":"P","q":"What are the limitations of Dräger tubes?","a":["**Gas-specific**: one tube type per gas.","**Limited measurement range**.","Possible **interference (cross-sensitivity)** from other gases.","Depends on **correct sampling and interpretation**.","**Cannot on their own confirm** that an atmosphere is safe."]},
+{"id":"c50","lab":"Q50","s":"PARA","src":"Fires, gases and stern tube flashcards #50","cat":"G","sub":"Gas detection equipment","t":"P","q":"What is a paramagnetic oxygen analyser?","a":["An instrument that measures **oxygen concentration** using the **magnetic properties of oxygen**."],"single":true},
+{"id":"c51","lab":"Q51","s":"PARA","src":"Fires, gases and stern tube flashcards #51","cat":"G","sub":"Gas detection equipment","t":"P","q":"What does paramagnetic mean?","a":["A substance that is **attracted towards a magnetic field**."],"single":true,"x":["**Oxygen is strongly paramagnetic**; most other common gases (e.g. nitrogen, CO₂) are not, so the reading is specific to oxygen."]},
+{"id":"c52","lab":"Q52","s":"PARA","src":"Fires, gases and stern tube flashcards #52","cat":"G","sub":"Gas detection equipment","t":"P","q":"How does a paramagnetic oxygen analyser work?","a":["**Oxygen is attracted** towards a **stronger magnetic field**.","This produces a **measurable physical effect**.","The analyser converts this into an **electrical signal**.","The oxygen concentration is displayed as a **percentage**."],"num":true,"x":["Dumb-bell type: oxygen in the field pushes on two **nitrogen-filled glass spheres**, **twisting the dumb-bell**. A **light beam, mirror and photocell** detect the movement; the current needed to restore it is **proportional to O₂ %**."]},
+{"id":"c53","lab":"Q53","s":"PARA","src":"Fires, gases and stern tube flashcards #53","cat":"G","sub":"Gas detection equipment","t":"P","q":"Where is a paramagnetic oxygen analyser used onboard?","a":["**Inert gas systems**.","**Cargo atmosphere monitoring**.","**Boiler exhaust gas monitoring**.","**Gas analysis systems**."]},
+{"id":"c54","lab":"Q54","s":"PARA","src":"Fires, gases and stern tube flashcards #54","cat":"G","sub":"Gas detection equipment","t":"P","q":"What is the difference between a paramagnetic and an electrochemical oxygen analyser?","a":["**Paramagnetic**: uses the **magnetic properties of oxygen**.","**Electrochemical**: uses an **electrochemical reaction** in a sensor cell."],"x":["Electrochemical cells are cheap and portable but **wear out** and can be **poisoned**. Paramagnetic analysers are **stable and accurate**, so they are used in **fixed systems** such as inert gas plants."]},
+{"id":"c55","lab":"Q55","s":"GFC","src":"Fires, gases and stern tube flashcards #55","cat":"R","sub":"Gas-free certificates","t":"R","q":"What is a Gas Free Certificate?","a":["A document confirming that a **tank or enclosed space** has been **tested** and **meets specified atmospheric requirements** for the **intended work**."],"single":true},
+{"id":"c56","lab":"Q56","s":"GFC","src":"Fires, gases and stern tube flashcards #56","cat":"R","sub":"Gas-free certificates","t":"R","q":"Who issues a Gas Free Certificate?","a":["An **appropriately authorised competent person**, in accordance with **applicable requirements**."],"single":true,"x":["Typically a **shore chemist / marine chemist** in a shipyard or port, or a **responsible officer** under the vessel's SMS."]},
+{"id":"c57","lab":"Q57","s":"GFC","src":"Fires, gases and stern tube flashcards #57","cat":"R","sub":"Gas-free certificates","t":"R","q":"What atmospheric conditions are checked before issuing a Gas Free Certificate?","a":["**Oxygen concentration**.","**Flammable gas concentration**.","**Toxic gas concentration**.","**Representative conditions throughout the space**: sample at different levels and corners."]},
+{"id":"c58","lab":"Q58","s":"GFC","src":"Fires, gases and stern tube flashcards #58","cat":"R","sub":"Gas-free certificates","t":"R","q":"What information is included in a Gas Free Certificate?","a":["**Identification and location** of the space.","**Date and time** of inspection.","**Atmospheric test results**.","**Intended work**.","**Restrictions and validity period**.","**Name and signature** of the authorised person."]},
+{"id":"c59","lab":"Q59","s":"GFC","src":"Fires, gases and stern tube flashcards #59","cat":"R","sub":"Gas-free certificates","t":"R","q":"Does a Gas Free Certificate automatically authorise enclosed-space entry or hot work?","a":["**No.** The appropriate **permit to work**, **risk assessment** and other required **safety arrangements** must also be completed."],"single":true,"x":["Separate permits: **enclosed-space entry permit** and **hot work permit**, each signed off under the **SMS**."]},
+{"id":"c60","lab":"Q60","s":"GFC","src":"Fires, gases and stern tube flashcards #60","cat":"R","sub":"Gas-free certificates","t":"P","q":"Why must atmospheric conditions continue to be monitored after issuing a Gas Free Certificate?","a":["**Atmospheric conditions can change**, so a space can become **unsafe after the initial inspection**."],"single":true,"x":["Causes: **release from sludge or scale**, **leaking valves or pipes**, **ventilation stopping**, or the **work itself** (e.g. hot work, coatings)."]},
+{"id":"c61","lab":"Q61","s":"STERN","src":"Fires, gases and stern tube flashcards #61","cat":"E","sub":"Stern tube","t":"P","q":"What is a stern tube?","a":["A **watertight housing** fitted at the **aft end of the ship** through which the **propeller shaft** passes."],"single":true},
+{"id":"c62","lab":"Q62","s":"STERN","src":"Fires, gases and stern tube flashcards #62","cat":"E","sub":"Stern tube","t":"P","q":"What are the three main functions of a stern tube?","a":["**Support the propeller shaft**.","Provide **bearing lubrication**.","**Prevent uncontrolled seawater ingress** and **lubricant leakage**."]},
+{"id":"c63","lab":"Q63","s":"STERN","src":"Fires, gases and stern tube flashcards #63","cat":"E","sub":"Stern tube","t":"P","q":"What are the main components of an oil-lubricated stern tube?","a":["**Stern tube housing**.","**Propeller shaft**.","**Stern tube bearings** (aft and forward).","**Forward seal**.","**Aft seal**.","**Lubrication system** (header tank, pumps, cooler)."]},
+{"id":"c64","lab":"Q64","s":"STERN","src":"Fires, gases and stern tube flashcards #64","cat":"E","sub":"Stern tube","t":"P","q":"What is the purpose of stern tube bearings?","a":["To **support the propeller shaft** and **reduce friction** during rotation."],"single":true,"x":["Oil-lubricated bearings are usually **white metal**. The **aft bearing** carries most of the load from the **propeller's weight**."]},
+{"id":"c65","lab":"Q65","s":"STERN","src":"Fires, gases and stern tube flashcards #65","cat":"E","sub":"Stern tube","t":"P","q":"What is the purpose of the aft stern tube seal?","a":["To **prevent seawater ingress** into the stern tube and **lubricating oil leakage into the sea**."],"single":true,"x":["The **header tank** keeps the oil pressure **slightly above sea pressure**, so any leak is oil out rather than water in."]},
+{"id":"c66","lab":"Q66","s":"STERN","src":"Fires, gases and stern tube flashcards #66","cat":"E","sub":"Stern tube","t":"P","q":"What is the purpose of the forward stern tube seal?","a":["To **prevent stern tube lubricating oil** from **leaking into the engine room**."],"single":true},
+{"id":"c67","lab":"Q67","s":"STERN","src":"Fires, gases and stern tube flashcards #67","cat":"E","sub":"Stern tube","t":"P","q":"What are the two main types of stern tube lubrication?","a":["**Oil-lubricated** stern tube.","**Water-lubricated** stern tube."],"x":["Oil systems with an oil-to-sea interface often use **environmentally acceptable lubricants (EALs)**, e.g. to meet **US VGP** requirements."]},
+{"id":"c68","lab":"Q68","s":"STERN","src":"Fires, gases and stern tube flashcards #68","cat":"W","sub":"Machinery monitoring","t":"V","q":"What checks are carried out on a stern tube during an engine-room watch?","a":["**Lubricating oil level** (header and drain tanks).","**Lubricating oil temperature**.","**Lubricating oil pressure**, where applicable.","**Bearing temperature**.","**Seal leakage**.","**Abnormal noise and vibration**."]},
+{"id":"c69","lab":"Q69","s":"STERN","src":"Fires, gases and stern tube flashcards #69","cat":"E","sub":"Stern tube","t":"P","q":"What happens if a stern tube seal fails?","a":["**Aft seal failure**: **seawater may enter** the stern tube, or **oil may leak into the sea**.","**Forward seal failure**: **oil leaks into the engine room**."],"x":["Signs: **falling header tank level**, **water in the stern tube oil**, oil sheen astern."]},
+{"id":"c70","lab":"Q70","s":"STERN","src":"Fires, gases and stern tube flashcards #70","cat":"E","sub":"Stern tube","t":"P","q":"What causes high stern tube bearing temperature?","a":["**Insufficient lubrication**.","**Bearing wear**.","**Shaft misalignment**.","**Excessive loading**."],"x":["Also **water contamination** of the oil and a **high oil temperature** (e.g. cooler fault)."]},
+{"id":"c71","lab":"Q71","s":"STERN","src":"Fires, gases and stern tube flashcards #71","cat":"W","sub":"Emergency response","t":"V","q":"What should an engineer do if stern tube bearing temperature becomes high?","a":["**Inform the chief engineer and the bridge**.","**Monitor the condition** closely.","**Check lubrication**: oil level, pressure and temperature.","Follow the vessel's procedures for **reducing shaft load** or **stopping**."]}];
+
+/* ---------- storage ---------- */
+const KEY = 'eow-orals-v2';
+let store = { marks: {}, history: [] };
+try { const raw = localStorage.getItem(KEY); if (raw) store = Object.assign(store, JSON.parse(raw)); } catch (e) {}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {} }
+
+/* ---------- helpers ---------- */
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\*(.+?)\*/g, '<i>$1</i>');
+const catLabel = q => `${CATS[q.cat]} · ${q.sub}`;
+function answerHTML(q) {
+  const body = q.single ? `<p class="single">${fmt(q.a[0])}</p>`
+    : `<${q.num ? 'ol' : 'ul'} class="${q.num ? 'num' : ''}">${q.a.map(p => `<li>${fmt(p)}</li>`).join('')}</${q.num ? 'ol' : 'ul'}>`;
+  const extra = q.x ? `<div class="extra"><h4>Also be ready to say <span>(added to your notes)</span></h4>${q.x.length > 1 ? `<ul>${q.x.map(p => `<li>${fmt(p)}</li>`).join('')}</ul>` : `<p>${fmt(q.x[0])}</p>`}</div>` : '';
+  return `<div class="answer"><h3>Model answer</h3>${body}${extra}<span class="tag t-${q.t}">${esc(TAGS[q.t])}</span>${q.src ? `<p class="src">Source: ${esc(q.src)}</p>` : ''}</div>`;
+}
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const view = document.getElementById('view');
+function sectionOptions(sel, filterFn) {
+  const all = Q.filter(filterFn || (() => true));
+  let h = `<option value="all"${sel === 'all' ? ' selected' : ''}>All sections (${all.length} questions)</option>`;
+  for (const k in SECTIONS) {
+    const n = all.filter(q => q.s === k).length;
+    if (n) h += `<option value="${k}"${sel === k ? ' selected' : ''}>${esc(SECTIONS[k])} (${n})</option>`;
+  }
+  return h;
+}
+
+/* ---------- study ---------- */
+const study = { order: Q.map((_, i) => i), sec: 'all', pos: 0, shown: false };
+function studyList() { return study.order.filter(i => study.sec === 'all' || Q[i].s === study.sec); }
+
+function renderStudy() {
+  const list = studyList();
+  if (study.pos >= list.length) study.pos = 0;
+  const q = Q[list[study.pos]];
+  const know = list.filter(i => store.marks[Q[i].id] === 'know').length;
+  const rev = list.filter(i => store.marks[Q[i].id] === 'review').length;
+  const tot = list.length, unseen = tot - know - rev;
+  const num = q.lab;
+  const m = store.marks[q.id];
+  view.innerHTML = `
+  <div class="wrap" style="max-width:none">
+    <div class="toolbar">
+      <select id="sec-study" aria-label="Section">${sectionOptions(study.sec)}</select>
+      <button class="btn primary" id="shuffle">↻ Shuffle</button>
+      <button class="btn" id="reset">Reset progress</button>
+      <span class="counter">Q ${study.pos + 1} of ${tot}</span>
+    </div>
+    <div class="stats">
+      <div class="stat"><b>${tot}</b><span>Total</span></div>
+      <div class="stat know"><b>${know}</b><span>Know it</span></div>
+      <div class="stat review"><b>${rev}</b><span>Review</span></div>
+      <div class="stat"><b>${unseen}</b><span>Unseen</span></div>
+    </div>
+    <div class="rail" aria-hidden="true"><i class="k" style="width:${tot ? know / tot * 100 : 0}%"></i><i class="r" style="width:${tot ? rev / tot * 100 : 0}%"></i></div>
+    <article class="card">
+      <div class="card-head">
+        <div class="qbadge"><b>${num}</b><small>${q.s}</small></div>
+        <div class="qtext"><div class="sec"><span class="cat c-${q.cat}">${esc(catLabel(q))}</span> ${esc(SECTIONS[q.s])}</div><h2>${esc(q.q)}</h2></div>
+      </div>
+      ${study.shown ? `${answerHTML(q)}` : ''}
+      <div class="card-foot">
+        ${study.shown ? `<button class="btn bad" id="m-review">✗ Need to review</button><button class="btn good" id="m-know">✓ Know it</button>` : ''}
+        ${m ? `<span class="mark ${m}">${m === 'know' ? 'Marked: know it' : 'Marked: review'}</span>` : ''}
+        <span class="spacer"></span>
+        <button class="btn" id="prev">← Prev</button>
+        <button class="btn primary" id="flip">${study.shown ? 'Hide answer' : 'Show answer'}</button>
+        <button class="btn" id="next">Next →</button>
+      </div>
+    </article>
+    <p class="hint"><kbd>Space</kbd> show/hide · <kbd>←</kbd> <kbd>→</kbd> move · <kbd>K</kbd> know it · <kbd>R</kbd> review</p>
+  </div>`;
+  const $ = id => document.getElementById(id);
+  $('sec-study').onchange = e => { study.sec = e.target.value; study.pos = 0; study.shown = false; renderStudy(); renderOverview(); };
+  $('shuffle').onclick = () => { study.order = shuffle(study.order); study.pos = 0; study.shown = false; renderStudy(); };
+  $('reset').onclick = confirmReset;
+  $('prev').onclick = () => moveStudy(-1);
+  $('next').onclick = () => moveStudy(1);
+  $('flip').onclick = () => { study.shown = !study.shown; renderStudy(); };
+  if (study.shown) { $('m-know').onclick = () => markStudy('know'); $('m-review').onclick = () => markStudy('review'); }
+}
+function moveStudy(d) { const n = studyList().length; study.pos = (study.pos + d + n) % n; study.shown = false; renderStudy(); }
+function markStudy(v) { const q = Q[studyList()[study.pos]]; store.marks[q.id] = v; save(); moveStudy(1); }
+function confirmReset() {
+  const btn = document.getElementById('reset');
+  if (btn.dataset.armed) { store.marks = {}; save(); study.pos = 0; study.shown = false; renderStudy(); return; }
+  btn.dataset.armed = '1'; btn.textContent = 'Click again to clear marks'; btn.classList.add('bad');
+  setTimeout(() => { if (btn.isConnected) { delete btn.dataset.armed; btn.textContent = 'Reset progress'; btn.classList.remove('bad'); } }, 3000);
+}
+
+/* ---------- quiz ---------- */
+let quiz = null; // { items, pos, picked, results }
+const quizCfg = { sec: 'all', count: '10', mode: 'mcq' };
+
+function renderQuizSetup() {
+  const pool = Q.filter(q => quizCfg.sec === 'all' || q.s === quizCfg.sec);
+  view.innerHTML = `
+  <article class="card"><div class="setup">
+    <h2>Start a quiz</h2>
+    <p>Questions come up in random order. Say your answer aloud as if to the examiner, reveal the model answer, then mark yourself honestly. Your score is saved under My results.</p>
+    <div class="field"><label for="q-sec">Section</label><select id="q-sec">${sectionOptions(quizCfg.sec)}</select></div>
+    <div class="field"><label for="q-count">Questions</label>
+      <select id="q-count">${['5','10','all'].map(v => `<option value="${v}"${quizCfg.count === v ? ' selected' : ''}>${v === 'all' ? 'All (' + pool.length + ')' : v}</option>`).join('')}</select></div>
+    <div><button class="btn primary" id="q-start" ${pool.length ? '' : 'disabled'}>Start quiz →</button></div>
+  </div></article>`;
+  document.getElementById('q-sec').onchange = e => { quizCfg.sec = e.target.value; renderQuizSetup(); };
+  document.getElementById('q-count').onchange = e => { quizCfg.count = e.target.value; };
+  document.getElementById('q-start').onclick = startQuiz;
+}
+function startQuiz() {
+  let pool = shuffle(Q.filter(q => quizCfg.sec === 'all' || q.s === quizCfg.sec));
+  if (quizCfg.count !== 'all') pool = pool.slice(0, +quizCfg.count);
+  quiz = { items: pool.map(q => ({ q, opts: q.opts ? shuffle(q.opts.map((t, i) => ({ t, ok: i === 0 }))) : null })), pos: 0, picked: null, shown: false, results: [] };
+  renderQuiz();
+}
+function renderQuiz() {
+  if (!quiz) return renderQuizSetup();
+  if (quiz.pos >= quiz.items.length) return renderQuizEnd();
+  const it = quiz.items[quiz.pos], q = it.q, n = quiz.items.length;
+  const correct = quiz.results.filter(Boolean).length;
+  const answered = quiz.picked !== null;
+  let body = '';
+  if (it.opts) {
+    body = `<div class="opts">${it.opts.map((o, i) => {
+      let cls = '';
+      if (answered) { if (o.ok) cls = 'right'; else if (i === quiz.picked) cls = 'wrong'; }
+      return `<button class="opt ${cls}" data-i="${i}" ${answered ? 'disabled' : ''}><span class="l">${'ABCD'[i]}</span><span>${esc(o.t)}</span></button>`;
+    }).join('')}</div>`;
+    if (answered) body += `<p class="verdict ${it.opts[quiz.picked].ok ? 'ok' : 'no'}">${it.opts[quiz.picked].ok ? 'Correct.' : 'Not quite. The correct answer is highlighted.'}</p>`;
+  }
+  const showAns = it.opts ? answered : quiz.shown;
+  if (showAns) body += `${answerHTML(q)}`;
+  let foot = '';
+  if (it.opts) foot = answered ? `<button class="btn primary" id="q-next">${quiz.pos + 1 === n ? 'See score' : 'Next →'}</button>` : `<span class="hint">Pick an answer</span>`;
+  else foot = !quiz.shown ? `<button class="btn primary" id="q-show">Show answer</button>`
+    : (answered ? `<button class="btn primary" id="q-next">${quiz.pos + 1 === n ? 'See score' : 'Next →'}</button>`
+      : `<button class="btn bad" id="q-miss">✗ I missed it</button><button class="btn good" id="q-got">✓ I got it</button>`);
+  view.innerHTML = `
+  <div class="wrap" style="max-width:none">
+    <div class="toolbar">
+      <button class="btn" id="q-quit">End quiz</button>
+      <span class="counter">Q ${quiz.pos + 1} of ${n} · ${correct} correct</span>
+    </div>
+    <div class="rail" aria-hidden="true"><i class="k" style="width:${quiz.pos / n * 100}%"></i></div>
+    <article class="card">
+      <div class="card-head">
+        <div class="qbadge"><b>${q.lab}</b><small>${q.s}</small></div>
+        <div class="qtext"><div class="sec"><span class="cat c-${q.cat}">${esc(catLabel(q))}</span> ${esc(SECTIONS[q.s])}${it.opts ? '' : ' · self-graded'}</div><h2>${esc(it.opts ? (q.mq || q.q) : q.q)}</h2></div>
+      </div>
+      ${body}
+      <div class="card-foot"><span class="spacer"></span>${foot}</div>
+    </article>
+  </div>`;
+  view.querySelectorAll('.opt').forEach(b => b.onclick = () => { const i = +b.dataset.i; quiz.picked = i; quiz.results.push(it.opts[i].ok); renderQuiz(); });
+  const $ = id => document.getElementById(id);
+  if ($('q-show')) $('q-show').onclick = () => { quiz.shown = true; renderQuiz(); };
+  if ($('q-got')) $('q-got').onclick = () => { quiz.picked = 1; quiz.results.push(true); renderQuiz(); };
+  if ($('q-miss')) $('q-miss').onclick = () => { quiz.picked = 0; quiz.results.push(false); renderQuiz(); };
+  if ($('q-next')) $('q-next').onclick = () => { quiz.pos++; quiz.picked = null; quiz.shown = false; renderQuiz(); };
+  $('q-quit').onclick = () => { quiz.items = quiz.items.slice(0, quiz.results.length); quiz.pos = quiz.items.length; renderQuiz(); };
+}
+function renderQuizEnd() {
+  const n = quiz.results.length, c = quiz.results.filter(Boolean).length;
+  if (!quiz.saved && n) {
+    store.history.unshift({ d: new Date().toISOString(), sec: quizCfg.sec, n, c,
+      bySec: quiz.items.reduce((m, it, i) => { const s = it.q.s; m[s] = m[s] || [0, 0]; m[s][1]++; if (quiz.results[i]) m[s][0]++; return m; }, {}) });
+    store.history = store.history.slice(0, 30); save(); quiz.saved = true;
+  }
+  const pct = n ? Math.round(c / n * 100) : 0;
+  const missed = quiz.items.filter((_, i) => !quiz.results[i]);
+  view.innerHTML = `
+  <article class="card"><div class="setup">
+    <h2>Quiz complete</h2>
+    <div class="score" style="color:var(${pct >= 70 ? '--good' : '--bad'})">${c} / ${n} <span style="font-size:1.2rem;color:var(--muted)">${pct}%</span></div>
+    ${missed.length ? `<p>Go back over these in Study mode:</p><ul>${missed.map(it => `<li>${esc(it.q.q)}</li>`).join('')}</ul>` : n ? '<p>Clean sheet. Try a different section next.</p>' : '<p>No questions answered.</p>'}
+    <div class="toolbar"><button class="btn primary" id="q-again">New quiz</button><button class="btn" id="q-res">See my results</button></div>
+  </div></article>`;
+  document.getElementById('q-again').onclick = () => { quiz = null; renderQuizSetup(); };
+  document.getElementById('q-res').onclick = () => setMode('results');
+}
+
+/* ---------- results ---------- */
+function renderResults() {
+  const totK = Q.filter(q => store.marks[q.id] === 'know').length;
+  const totR = Q.filter(q => store.marks[q.id] === 'review').length;
+  const quizN = store.history.reduce((s, h) => s + h.n, 0), quizC = store.history.reduce((s, h) => s + h.c, 0);
+  let rows = '';
+  for (const k in SECTIONS) {
+    const qs = Q.filter(q => q.s === k); if (!qs.length) continue;
+    const kn = qs.filter(q => store.marks[q.id] === 'know').length, rv = qs.filter(q => store.marks[q.id] === 'review').length;
+    rows += `<div class="secrow"><span>${esc(SECTIONS[k])}</span><span class="n">${kn}/${qs.length} known</span>
+      <div class="rail"><i class="k" style="width:${kn / qs.length * 100}%"></i><i class="r" style="width:${rv / qs.length * 100}%"></i></div></div>`;
+  }
+  const hist = store.history.length ? `<div style="overflow-x:auto"><table class="hist"><thead><tr><th>Date</th><th>Section</th><th>Score</th></tr></thead><tbody>
+    ${store.history.map(h => `<tr><td>${new Date(h.d).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} ${new Date(h.d).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</td>
+      <td>${h.sec === 'all' ? 'All sections' : esc(SECTIONS[h.sec] || h.sec)}</td><td>${h.c}/${h.n} (${Math.round(h.c / h.n * 100)}%)</td></tr>`).join('')}
+    </tbody></table></div>` : `<p class="empty">No quizzes taken yet. Your scores will appear here.</p>`;
+  const reviewList = Q.filter(q => store.marks[q.id] === 'review');
+  view.innerHTML = `
+  <div class="wrap" style="max-width:none">
+    <div class="stats">
+      <div class="stat"><b>${Q.length}</b><span>Questions</span></div>
+      <div class="stat know"><b>${totK}</b><span>Know it</span></div>
+      <div class="stat review"><b>${totR}</b><span>To review</span></div>
+      <div class="stat"><b>${quizN ? Math.round(quizC / quizN * 100) + '%' : '–'}</b><span>Quiz average</span></div>
+    </div>
+    <div class="res-grid">
+      <section class="panel"><h2>Study progress by section</h2>${rows}</section>
+      <section class="panel"><h2>Quiz history</h2>${hist}</section>
+    </div>
+    <section class="panel"><h2>Marked for review</h2>
+      ${reviewList.length ? `<ul style="margin:0;padding-left:18px">${reviewList.map(q => `<li>${esc(q.q)} <span class="n" style="color:var(--muted);font-size:.8rem">(${esc(SECTIONS[q.s])})</span></li>`).join('')}</ul>
+        <div style="margin-top:12px"><button class="btn primary" id="go-review">Study these now</button></div>`
+        : `<p class="empty">Nothing marked yet. In Study mode, mark a card “Need to review” and it will be listed here.</p>`}
+    </section>
+  </div>`;
+  const g = document.getElementById('go-review');
+  if (g) g.onclick = () => { const ids = new Set(reviewList.map(q => q.id)); study.order = study.order.filter(i => ids.has(Q[i].id)).concat(study.order.filter(i => !ids.has(Q[i].id))); study.sec = 'all'; study.pos = 0; study.shown = false; setMode('study'); };
+}
+
+/* ---------- overview panel ---------- */
+function renderOverview() {
+  const el = document.getElementById('overview');
+  const active = mode === 'study' ? study.sec : null;
+  const secs = Object.keys(SECTIONS).map((k, i) => {
+    const qs = Q.filter(q => q.s === k); if (!qs.length) return '';
+    return `<button class="ov-sec${active === k ? ' on' : ''}" data-sec="${k}" title="Study this section"><span>${i + 1}. ${esc(SECTIONS[k])}</span><span class="ov-n">${qs.length}</span><span class="ov-lab">${qs[0].lab}–${qs[qs.length - 1].lab}</span></button>`;
+  }).join('');
+  const cats = ['E', 'R', 'G', 'W'].map(c => {
+    const qs = Q.filter(q => q.cat === c), subs = {};
+    qs.forEach(q => { subs[q.sub] = (subs[q.sub] || 0) + 1; });
+    const list = Object.entries(subs).sort((a, b) => b[1] - a[1]).map(([s, n]) => `<li>${esc(s)} <b>${n}</b></li>`).join('');
+    return `<div><div class="ov-cat-h"><span class="cat c-${c}">${CATS[c]}</span><b>${qs.length}</b> cards</div><ul class="ov-subs">${list}</ul></div>`;
+  }).join('');
+  const tags = ['P', 'V', 'R'].map(t => `<span class="tag t-${t}">${esc(TAGS[t])}</span><span class="n">${Q.filter(q => q.t === t).length} cards</span>`).join('');
+  el.innerHTML = `<h2>How the cards are organised</h2>
+    <p>${Q.length} cards. Click a section to study it. The coloured category label and the answer-type label appear on every card.</p>
+    <div class="ov-grid">
+      <div class="ov-block"><h3>Sections (study order)</h3><div class="ov-secs">${secs}</div></div>
+      <div class="ov-block"><h3>Categories and subcategories</h3><div class="ov-cats">${cats}</div></div>
+    </div>
+    <div class="ov-tags"><h3 style="margin:0;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">Answer types</h3>${tags}</div>`;
+  el.querySelectorAll('.ov-sec').forEach(b => b.onclick = () => {
+    study.sec = b.dataset.sec; study.pos = 0; study.shown = false; setMode('study');
+    document.querySelector('.tabs').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+
+/* ---------- modes ---------- */
+let mode = 'study';
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.mode === m));
+  if (m === 'study') renderStudy(); else if (m === 'quiz') renderQuiz(); else renderResults();
+  renderOverview();
+}
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => setMode(t.dataset.mode));
+document.addEventListener('keydown', e => {
+  if (mode !== 'study' || e.target.tagName === 'SELECT' || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key === ' ' && e.target.tagName !== 'BUTTON') { e.preventDefault(); study.shown = !study.shown; renderStudy(); }
+  else if (e.key === 'ArrowRight') moveStudy(1);
+  else if (e.key === 'ArrowLeft') moveStudy(-1);
+  else if (study.shown && (e.key === 'k' || e.key === 'K')) markStudy('know');
+  else if (study.shown && (e.key === 'r' || e.key === 'R')) markStudy('review');
+});
+setMode('study');
+</script>
